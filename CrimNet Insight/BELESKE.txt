@@ -1,0 +1,15 @@
+
+
+-pozadina
+
+-CREATE komande za kreiranje baze
+
+-prikaz veza iz baze
+
+-desni deo za brisanje, dodavanje, izmenu i vezivanje
+
+-kartica sa podacima i slika(mozda) aktera kad se klikne na njega sa grafa
+
+-dizajn panela za graf
+
+-deo za dodavanje izvestaja od strane korisnika (inspektora npr) i taj deo je vidljiv na stranici
