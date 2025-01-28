@@ -1,0 +1,71 @@
+<div class="container" style="background-image: url('bg-01.jpg');">
+    <div class="left-panel">
+        <section>
+            <div class="example-button-row">
+              <div class="example-flex-container">
+                <div class="example-button-container">
+                    <button mat-fab extended (click)="onAkteriClick()">
+                      <mat-icon>person</mat-icon>
+                      Akteri
+                    </button>
+                    <button mat-fab extended (click)="onLokacijeClick()">
+                      <mat-icon>info</mat-icon>
+                      Lokacije
+                    </button>
+                </div>
+                <div class="example-button-container">
+                    <button mat-fab extended (click)="onVozilaClick()">
+                      <mat-icon>directions_car</mat-icon>
+                      Vozila
+                    </button>
+                    <button mat-fab extended (click)="onIncidentiClick()">
+                      <mat-icon>warning</mat-icon>
+                      Incidenti
+                    </button>
+                </div>
+              </div>
+            </div>
+          </section>
+    </div>
+  
+    <div class="center-panel">
+      <div class="graph">
+        <!-- Mesto za graf iz Neo4j baze -->
+        
+      </div>
+    </div>
+  
+    <div class="right-panel">
+        <section>
+            <div class="example-button-row">
+              <div class="example-flex-container">
+                <div class="example-button-container">
+                    <button mat-fab extended>
+                        <mat-icon>add</mat-icon>
+                        Dodaj Element
+                    </button>
+                </div>
+                <div class="example-button-container">
+                    <button mat-fab extended>
+                        <mat-icon>remove</mat-icon>
+                        Ukloni Element
+                    </button>
+                </div>
+                <div class="example-button-container">
+                    <button mat-fab extended>
+                        <mat-icon>link</mat-icon>
+                        Kreiraj Vezu
+                    </button>
+                </div>
+                <div class="example-button-container">
+                    <button mat-fab extended>
+                        <mat-icon>edit</mat-icon>
+                        Izmeni Element
+                    </button>
+                </div>
+              </div>
+            </div>
+          </section>
+    </div>
+</div>
+  
