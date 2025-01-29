@@ -1,8 +1,9 @@
 
 
+-CREATE komande za kreiranje baze
 -pozadina
 
--CREATE komande za kreiranje baze
+---------------------------------------
 
 -prikaz veza iz baze
 

@@ -23,5 +23,9 @@ export class DataService {
   getLokacije(): Observable<any> {
     return this.http.get('/api/lokacije');
   }
+
+  getAddEl(elementData: any): Observable<any> {
+    return this.http.post('http://localhost:3000/api/elements', elementData);
+  }
   
 }

@@ -3,11 +3,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { DataSet, Network } from 'vis-network/standalone/umd/vis-network.min.js';
 import { DataService } from '../data.service';
+import { AddElementComponent } from '../add-element/add-element.component'; // Prilagodi putanju prema tvojoj strukturi
+import { CommonModule } from '@angular/common';  // Importuj CommonModule
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [MatIconModule, MatButtonModule],
+  imports: [MatIconModule, MatButtonModule, AddElementComponent, CommonModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
@@ -144,5 +146,17 @@ export class DashboardComponent implements OnInit {
     } else {
       console.error('Element .graph not found');
     }
+  }
+
+  showAddElement: boolean = false;
+  toggleAddElement() {
+    this.showAddElement = !this.showAddElement;
+  }
+
+  addElementToDatabase(elementData: any) {
+    this.dataService.getAddEl(elementData)
+      .subscribe(response => {
+        console.log('Element added:', response);
+      });
   }
 }

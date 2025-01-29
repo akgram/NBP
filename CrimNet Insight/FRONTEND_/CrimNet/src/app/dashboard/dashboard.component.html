@@ -1,4 +1,4 @@
-<div class="container" style="background-image: url('bg-01.jpg');">
+<div class="container" style="background-image: url('dash.jpg');">
     <div class="left-panel">
         <section>
             <div class="example-button-row">
@@ -39,8 +39,11 @@
         <section>
             <div class="example-button-row">
               <div class="example-flex-container">
+                <div *ngIf="showAddElement">
+                  <app-add-element (addElement)="addElementToDatabase($event)"></app-add-element>
+                </div>
                 <div class="example-button-container">
-                    <button mat-fab extended>
+                    <button mat-fab extended (click)="toggleAddElement()">
                         <mat-icon>add</mat-icon>
                         Dodaj Element
                     </button>

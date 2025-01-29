@@ -1,0 +1,71 @@
+CREATE (:Kriminalac {id: 1, ime: "Marko Petrović", pseudonim: "Soko", godine: 35, status: "aktivan"})
+CREATE (:Kriminalac {id: 2, ime: "Nikola Jovanović", pseudonim: "Zmija", godine: 40, status: "uhapsen"})
+CREATE (:Kriminalac {id: 3, ime: "Milan Antić", pseudonim: "Vuk", godine: 28, status: "aktivan"})
+CREATE (:Kriminalac {id: 4, ime: "Lazar Ilić", pseudonim: "Haker", godine: 32, status: "u bekstvu"})
+CREATE (:Kriminalac {id: 5, ime: "Jovan Mitrović", pseudonim: "Buldog", godine: 45, status: "aktivan"})
+CREATE (:Kriminalac {id: 6, ime: "Dejan Lukić", pseudonim: "Zmaj", godine: 29, status: "uhapsen"})
+CREATE (:Kriminalac {id: 7, ime: "Filip Arsenović", pseudonim: "Alfa", godine: 38, status: "aktivan"})
+CREATE (:Kriminalac {id: 8, ime: "Nenad Ristić", pseudonim: "Omega", godine: 36, status: "u bekstvu"})
+CREATE (:Kriminalac {id: 9, ime: "Igor Đorđević", pseudonim: "Pauk", godine: 31, status: "aktivan"})
+CREATE (:Kriminalac {id: 10, ime: "Stefan Stojković", pseudonim: "Ris", godine: 27, status: "uhapsen"})
+
+CREATE (:Vozilo {id: 101, registracija: "NI123AA", tip: "Automobil", vlasnik: "Marko Petrović"})
+CREATE (:Vozilo {id: 102, registracija: "BG456BB", tip: "Motor", vlasnik: "Nikola Jovanović"})
+CREATE (:Vozilo {id: 103, registracija: "NS789CC", tip: "Kombi", vlasnik: "Milan Antić"})
+CREATE (:Vozilo {id: 104, registracija: "KG654DD", tip: "Džip", vlasnik: "Lazar Ilić"})
+CREATE (:Vozilo {id: 105, registracija: "VA321EE", tip: "Automobil", vlasnik: "Jovan Mitrović"})
+CREATE (:Vozilo {id: 106, registracija: "VR112FF", tip: "Kamion", vlasnik: "Dejan Lukić"})
+
+CREATE (:Incident {id: 201, datum: "2025-01-20", tip: "Pljacka", opis: "Pljačka banke u centru Niša sa velikom materijalnom štetom."})
+CREATE (:Incident {id: 202, datum: "2025-01-15", tip: "Napad", opis: "Napad na blindirano vozilo sa dragocenostima."})
+CREATE (:Incident {id: 203, datum: "2025-01-10", tip: "Kradja", opis: "Krađa ličnih podataka visokih zvaničnika."})
+CREATE (:Incident {id: 204, datum: "2025-01-05", tip: "Provala", opis: "Provala u luksuznu vilu u Beogradu."})
+
+CREATE (:Lokacija {id: 301, ime: "Bank of Niš", grad: "Niš", drzava: "Srbija"})
+CREATE (:Lokacija {id: 302, ime: "Tržni centar Delta", grad: "Beograd", drzava: "Srbija"})
+CREATE (:Lokacija {id: 303, ime: "Magacin Luka", grad: "Novi Sad", drzava: "Srbija"})
+CREATE (:Lokacija {id: 304, ime: "Hotel Elegance", grad: "Niš", drzava: "Srbija"})
+CREATE (:Lokacija {id: 305, ime: "Benzinska stanica Petrola", grad: "Kragujevac", drzava: "Srbija"})
+
+CREATE (:User {username: "admin1", password: "admin1"})
+CREATE (:User {username: "admin2", password: "admin2"})
+CREATE (:User {username: "admin3", password: "admin3"})
+
+----------------------------------------------------------------------------------
+
+
+MATCH (i201:Incident {id: 201}), (l301:Lokacija {id: 301})
+CREATE (i201)-[:DOGODIO_SE]->(l301);
+
+MATCH (i202:Incident {id: 202}), (l302:Lokacija {id: 302})
+CREATE (i202)-[:DOGODIO_SE]->(l302);
+
+MATCH (k1:Kriminalac {id: 1}), (v101:Vozilo {id: 101})
+CREATE (k1)-[:POSEDUJE]->(v101);
+
+MATCH (k3:Kriminalac {id: 3}), (v103:Vozilo {id: 103})
+CREATE (k3)-[:POSEDUJE]->(v103);
+
+MATCH (k2:Kriminalac {id: 2}), (k4:Kriminalac {id: 4})
+CREATE (k2)-[:SARADJUJE]->(k4);
+
+MATCH (k5:Kriminalac {id: 5}), (k7:Kriminalac {id: 7})
+CREATE (k5)-[:SARADJUJE]->(k7);
+
+MATCH (k1:Kriminalac {id: 10}), (k2:Kriminalac {id: 8})
+CREATE (k1)-[:SARADJUJE]->(k2)
+
+MATCH (k3:Kriminalac {id: 6}), (k4:Kriminalac {id: 5})
+CREATE (k3)-[:SARADJUJE]->(k4)
+
+MATCH (k8:Kriminalac {id: 8}), (l304:Lokacija {id: 304})
+CREATE (k8)-[:VIDJEN_U]->(l304);
+
+MATCH (k6:Kriminalac {id: 6}), (l303:Lokacija {id: 303})
+CREATE (k6)-[:VIDJEN_U]->(l303);
+
+MATCH (v102:Vozilo {id: 102}), (i202:Incident {id: 202})
+CREATE (v102)-[:KORISCENO_U]->(i202);
+
+MATCH (v104:Vozilo {id: 104}), (i203:Incident {id: 203})
+CREATE (v104)-[:KORISCENO_U]->(i203);

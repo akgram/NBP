@@ -111,7 +111,7 @@ app.get('/api/vozila', async (req, res) => {
 app.get('/api/incidenti', async (req, res) => {
   try {
     const result = await session.run(`MATCH (i:Incident) OPTIONAL MATCH (i)-[r]->(m:Incident) RETURN 
-                                      collect({id: id(i), tip: i.tip, datum: i.datum}) AS nodes, 
+                                      collect({id: id(i), tip: i.tip, datum: i.datum, opis: i.opis}) AS nodes, 
                                       collect({from: id(i), to: id(m), label: type(r)}) AS edges;`);
     const nodes = result.records[0].get('nodes');
     const edges = result.records[0].get('edges');
@@ -144,7 +144,7 @@ app.get('/api/incidenti', async (req, res) => {
 app.get('/api/lokacije', async (req, res) => {
   try {
     const result = await session.run(`MATCH (l:Lokacija) OPTIONAL MATCH (l)-[r]->(m:Lokacija) RETURN 
-                                      collect({id: id(l), ime: l.ime, grad: l.grad, država: l.država}) AS nodes, 
+                                      collect({id: id(l), ime: l.ime, grad: l.grad, drzava: l.drzava}) AS nodes, 
                                       collect({from: id(l), to: id(m), label: type(r)}) AS edges;`);
     const nodes = result.records[0].get('nodes');
     const edges = result.records[0].get('edges');
@@ -154,7 +154,7 @@ app.get('/api/lokacije', async (req, res) => {
     const response = {
       nodes: nodes.map(node => ({
         id: node.id.toString(),
-        label: node.ime + '\n' + node.grad + ', ' + node.država || `Čvor ${node.id}`
+        label: node.ime + '\n' + node.grad + ', ' + node.drzava || `Čvor ${node.id}`
       })),
       edges: edges.length > 0 
         ? edges
@@ -170,6 +170,23 @@ app.get('/api/lokacije', async (req, res) => {
   } catch (error) {
     console.error('Error fetching lokacije:', error);
     res.status(500).json({ message: 'Internal server error.' });
+  }
+});
+
+
+// API endpoint za dodavanje elementa
+app.post('/api/elements', async (req, res) => {
+  const { elementType, additionalInfo } = req.body;
+
+  try {
+    //const result = await session.run(
+      //'CREATE (e:Element {type: $elementType, info: $additionalInfo}) RETURN e',
+      //{ elementType, additionalInfo }
+    //);
+    //res.status(201).json(result.records[0].get('e').properties);
+  } catch (error) {
+    console.error('Error adding element:', error);
+    res.status(500).send('Error adding element');
   }
 });
 
