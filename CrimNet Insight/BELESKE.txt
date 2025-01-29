@@ -3,7 +3,7 @@
 -CREATE komande za kreiranje baze
 -pozadina
 
----------------------------------------
+----------------------------------------
 
 -prikaz veza iz baze
 
