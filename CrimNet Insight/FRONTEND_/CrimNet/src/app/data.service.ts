@@ -24,8 +24,16 @@ export class DataService {
     return this.http.get('/api/lokacije');
   }
 
-  getAddEl(elementData: any): Observable<any> {
-    return this.http.post('http://localhost:3000/api/elements', elementData);
+  getTipovi(): Observable<any> {
+    return this.http.get('/api/node-types');
+  }
+
+  getAttributesForType(type: string): Observable<any> {
+    return this.http.get(`/api/node-types/attributes?type=${type}`);
+  }
+
+  addNodeToDatabase(nodeData: any): Observable<any> {
+    return this.http.post('/api/add-node', nodeData);
   }
   
 }

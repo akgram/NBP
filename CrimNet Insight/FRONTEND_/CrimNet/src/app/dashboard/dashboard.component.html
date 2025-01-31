@@ -39,9 +39,26 @@
         <section>
             <div class="example-button-row">
               <div class="example-flex-container">
-                <div *ngIf="showAddElement">
-                  <app-add-element (addElement)="addElementToDatabase($event)"></app-add-element>
-                </div>
+                <div class="modal" *ngIf="showAddElement">
+                  <button class="close-btn" (click)="toggleAddElement()">✖</button>
+                  <div class="modal-content">
+                    <h2>Dodaj Element</h2>
+                    <form (ngSubmit)="onSubmit()">
+                      <label for="elementType">Tip Elementa:</label>
+                      <select id="elementType" name="elementType" [(ngModel)]="selectedType" (change)="updateInputFields()">
+                        <option value="">Izaberite tip elementa</option>
+                        <option *ngFor="let type of nodeTypes" [value]="type">{{ type }}</option>
+                      </select>
+                
+                      <div *ngFor="let field of nodeAttributes; let i = index">
+                        <label for="additionalInfo{{i}}">{{ field }}:</label>
+                        <input type="text" id="additionalInfo{{i}}" [(ngModel)]="inputFields[i]" [ngModelOptions]="{standalone: true}"/>
+                      </div>
+                
+                      <button type="submit">Dodaj</button>
+                    </form>
+                  </div>
+                </div>              
                 <div class="example-button-container">
                     <button mat-fab extended (click)="toggleAddElement()">
                         <mat-icon>add</mat-icon>

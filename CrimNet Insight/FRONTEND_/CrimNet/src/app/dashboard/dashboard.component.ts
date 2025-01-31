@@ -3,13 +3,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { DataSet, Network } from 'vis-network/standalone/umd/vis-network.min.js';
 import { DataService } from '../data.service';
-import { AddElementComponent } from '../add-element/add-element.component'; // Prilagodi putanju prema tvojoj strukturi
 import { CommonModule } from '@angular/common';  // Importuj CommonModule
+import { HttpClient } from '@angular/common/http';
+import { FormsModule } from '@angular/forms'; // Dodaj FormsModule
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [MatIconModule, MatButtonModule, AddElementComponent, CommonModule],
+  imports: [MatIconModule, MatButtonModule, CommonModule, FormsModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
@@ -18,7 +19,7 @@ export class DashboardComponent implements OnInit {
   data: any[] = [];
   title: string = '';
 
-  constructor(private dataService: DataService) {}
+  constructor(private dataService: DataService, private http: HttpClient) {}
 
   ngOnInit(): void {}
 
@@ -80,13 +81,13 @@ export class DashboardComponent implements OnInit {
   getNodeColor(title: string) {
     switch (title) {
       case 'Akteri':
-        return { background: 'pink', border: 'darkviolet' };  // Roze za Aktere
+        return { background: 'pink', border: 'black' };  // Roze za Aktere
       case 'Incidenti':
-        return { background: 'red', border: 'darkred' };      // Crveno za Incidenti
+        return { background: 'red', border: 'black' };      // Crveno za Incidenti
       case 'Vozila':
-        return { background: 'blue', border: 'darkblue' };     // Plavo za Vozila
-      case 'Lokacija':
-        return { background: 'orange', border: 'darkorange' }; // Narandžasto za Lokaciju
+        return { background: 'blue', border: 'black' };     // Plavo za Vozila
+      case 'Lokacije':
+        return { background: 'orange', border: 'black' }; // Narandžasto za Lokaciju
       default:
         return { background: 'gray', border: 'black' };        // Podrazumevano (sivo)
     }
@@ -117,7 +118,7 @@ export class DashboardComponent implements OnInit {
           shape: 'dot',
           size: 25,
           font: { size: 15 },
-          color: this.getNodeColor(title)
+          color: this.getNodeColor(title),
         },
         edges: {
           color: 'white',
@@ -147,16 +148,97 @@ export class DashboardComponent implements OnInit {
       console.error('Element .graph not found');
     }
   }
+/////////////////////////////////////////////////////////////////////////////////////////
+//add element
+  nodeTypes: string[] = []; // Lista tipova čvorova
+  selectedType: string = ''; // Izabrani tip
+  nodeAttributes: string[] = []; // Izabrani tip
+
+  loadNodeTypes() {
+    this.dataService.getTipovi().subscribe({
+      next: (data) => {
+        this.nodeTypes = data; // Ubacujemo tipove u listu
+      },
+      error: (error) => {
+        console.error('Greška pri učitavanju tipova:', error);
+      }
+    });
+  }
+
+  loadNodeAttributes() {
+    if (!this.selectedType) return; // Proveri da li je tip izabran
+  
+    this.dataService.getAttributesForType(this.selectedType).subscribe({
+      next: (data) => {
+        this.nodeAttributes = data; // Atributi za selektovani tip
+        console.log(this.nodeAttributes);
+        this.nodeAttributes = this.nodeAttributes.map(type => type.charAt(0).toUpperCase() + type.slice(1).toLowerCase());
+      },
+      error: (error) => {
+        console.error('Greška pri učitavanju atributa:', error);
+      }
+    });
+  }  
+
 
   showAddElement: boolean = false;
   toggleAddElement() {
+    if(!this.showAddElement)
+    {
+      this.loadNodeTypes();
+    }
     this.showAddElement = !this.showAddElement;
   }
 
-  addElementToDatabase(elementData: any) {
-    this.dataService.getAddEl(elementData)
-      .subscribe(response => {
-        console.log('Element added:', response);
-      });
+  inputFields: string[] = []; // Polja koja će biti generisana
+  // Metoda koja ažurira broj input polja na osnovu izabranog tipa
+  updateInputFields() {
+    this.inputFields = []; // Resetovanje polja
+    if (this.selectedType === 'Kriminalac') {
+      this.inputFields = ['', '', '', '', ''];
+    } else if (this.selectedType === 'Vozilo') {
+      this.inputFields = ['', '', '', ''];
+    } else if (this.selectedType === 'Lokacija') {
+      this.inputFields = ['', '', '', ''];
+    } else if (this.selectedType === 'Incident') {
+      this.inputFields = ['', '', '', ''];
+    }
+    this.inputFields = this.nodeAttributes;
+
+    this.inputFields = Array(this.nodeAttributes.length).fill('');
+    this.loadNodeAttributes();
+  }
+
+  //elementType: string = '';
+  //additionalInfo: string = '';
+
+  onSubmit() {
+    if (this.inputFields.length === 0) {
+      console.error('Nema unosa!');
+      return;
+    }
+  
+    // Kreiraj objekat sa podacima za unos sa pravilnim tipom
+    const nodeData: Record<string, string> = this.inputFields.reduce((acc, value, index) => {
+      acc[this.nodeAttributes[index]] = value;
+      return acc;
+    }, {} as Record<string, string>);  // Pravilno inicijalizujemo kao Record<string, string>
+  
+    nodeData['type'] = this.selectedType;
+
+      console.log(nodeData)
+    // Pozivamo DataService koji će slati podatke backendu
+    this.dataService.addNodeToDatabase(nodeData).subscribe({
+      next: (response) => {
+        console.log('Uspešno dodato:', response);
+        this.inputFields = Array(this.nodeAttributes.length).fill('');
+        this.toggleAddElement();
+        // Ovde možeš dodati logiku za uspešno dodavanje, kao što je obaveštenje korisnika
+      },
+      error: (error) => {
+        console.error('Greška pri dodavanju:', error);
+        // Obradi grešku ako je potrebno
+      }
+    });
   }
 }

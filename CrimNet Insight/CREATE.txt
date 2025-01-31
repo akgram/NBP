@@ -53,10 +53,10 @@ MATCH (k5:Kriminalac {id: 5}), (k7:Kriminalac {id: 7})
 CREATE (k5)-[:SARADJUJE]->(k7);
 
 MATCH (k1:Kriminalac {id: 10}), (k2:Kriminalac {id: 8})
-CREATE (k1)-[:SARADJUJE]->(k2)
+CREATE (k1)-[:SARADJUJE]->(k2);
 
 MATCH (k3:Kriminalac {id: 6}), (k4:Kriminalac {id: 5})
-CREATE (k3)-[:SARADJUJE]->(k4)
+CREATE (k3)-[:SARADJUJE]->(k4);
 
 MATCH (k8:Kriminalac {id: 8}), (l304:Lokacija {id: 304})
 CREATE (k8)-[:VIDJEN_U]->(l304);

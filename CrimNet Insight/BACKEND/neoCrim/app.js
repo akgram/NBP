@@ -174,22 +174,68 @@ app.get('/api/lokacije', async (req, res) => {
 });
 
 
-// API endpoint za dodavanje elementa
-app.post('/api/elements', async (req, res) => {
-  const { elementType, additionalInfo } = req.body;
-
+app.get('/api/node-types', async (req, res) => {
   try {
-    //const result = await session.run(
-      //'CREATE (e:Element {type: $elementType, info: $additionalInfo}) RETURN e',
-      //{ elementType, additionalInfo }
-    //);
-    //res.status(201).json(result.records[0].get('e').properties);
+    const result = await session.run(`CALL db.labels() YIELD label WHERE label <> 'User' RETURN label`);
+
+    const types = result.records.map(record => record.get('label'));
+    res.json(types);
   } catch (error) {
-    console.error('Error adding element:', error);
-    res.status(500).send('Error adding element');
+    res.status(500).json({ error: error.message });
   }
 });
 
+app.get('/api/node-types/attributes', async (req, res) => {
+  const { type } = req.query; // Uzmi 'type' iz query string-a
+
+  if (!type) {
+    return res.status(400).json({ error: 'Tip je obavezan.' });
+  }
+
+  try {
+    console.log("try");
+    const result = await session.run(`MATCH (n:${type}) LIMIT 1 RETURN keys(n) AS attributes`);
+
+    if (result.records.length > 0) {
+      const attributes = result.records[0].get('attributes');
+      console.log(attributes);
+      res.json(attributes); // Vrati atribute kao JSON
+    } else {
+      res.status(404).json({ error: 'Tip nije pronađen u bazi.' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API endpoint za dodavanje elementa
+app.post('/api/add-node', async (req, res) => {
+  const nodeData = req.body;  // Podaci dobijeni iz klijenta
+
+  if (!nodeData) {
+    return res.status(400).json({ error: 'Podaci nisu poslati.' });
+  }
+
+  console.log('Podaci koji dolaze:', req.body);
+
+  try {
+    // Kreiraj čvor u Neo4j sa podacima
+    const properties = Object.entries(nodeData)
+  .filter(([key]) => key !== 'type')  // Ignorišemo 'type'
+  .map(([key, value]) => `${key.charAt(0).toLowerCase() + key.slice(1)}: "${value}"`)  // Pretvaramo u string sa malim prvim slovom
+  .join(', ');  // Spajamo sve u jedan string
+
+    const result = await session.run(`CREATE (n:${nodeData.type} {${properties}}) RETURN n`);
+    
+    if (result.records.length > 0) {
+      res.status(201).json({ message: 'Element uspešno dodat', node: result.records[0].get(0) });
+    } else {
+      res.status(400).json({ error: 'Greška pri dodavanju elementa.' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 
 // Pokretanje servera

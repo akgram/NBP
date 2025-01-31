@@ -3,6 +3,8 @@
 -CREATE komande za kreiranje baze
 -pozadina
 
+-dodavanje radiii, malo optimizacija i tjt
+
 ----------------------------------------
 
 -prikaz veza iz baze
