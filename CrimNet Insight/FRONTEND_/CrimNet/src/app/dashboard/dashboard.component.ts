@@ -186,6 +186,9 @@ export class DashboardComponent implements OnInit {
     if(!this.showAddElement)
     {
       this.loadNodeTypes();
+      this.selectedType = '';
+      this.inputFields = [];
+      this.nodeAttributes = [];
     }
     this.showAddElement = !this.showAddElement;
   }
@@ -233,11 +236,21 @@ export class DashboardComponent implements OnInit {
         console.log('Uspešno dodato:', response);
         this.inputFields = Array(this.nodeAttributes.length).fill('');
         this.toggleAddElement();
+        alert('Uspešno ste dodali čvor u bazu!');
         // Ovde možeš dodati logiku za uspešno dodavanje, kao što je obaveštenje korisnika
       },
       error: (error) => {
         console.error('Greška pri dodavanju:', error);
         // Obradi grešku ako je potrebno
+        //alert(`Greška: ${error.message}`);
+
+        if (error.message.includes('id') || error.message.includes('jmbg')) {
+          alert('Greška pri odabiru ID-a ili JMBG-a. \nJMBG mora biti 13 cifara!\nID mora biti jedinstven!\nMolimo proverite unete podatke.');
+        } else {
+          alert('Došlo je do greške pri dodavanju podataka. \nJMBG mora biti 13 cifara! \nID mora biti jedinstven!\nPokušajte ponovo.');
+        }
+
+        this.inputFields = Array(this.nodeAttributes.length).fill('');
       }
     });
   }

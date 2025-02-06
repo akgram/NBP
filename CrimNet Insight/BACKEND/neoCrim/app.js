@@ -45,28 +45,32 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/akteri', async (req, res) => {
   try {
     const result = await session.run(`MATCH (n:Kriminalac) OPTIONAL MATCH (n)-[r]->(m:Kriminalac) RETURN 
-                                      collect({id: id(n), pseudonim: n.pseudonim, ime: n.ime, godine: n.godine, status: n.status}) AS nodes, 
-                                      collect({from: id(n), to: id(m), label: type(r)}) AS edges;`);
+                                      collect({jmbg: n.jmbg, pseudonim: n.pseudonim, ime: n.ime, godine: n.godine, status: n.status}) AS nodes, 
+                                      collect({from: n.jmbg, to: m.jmbg, label: type(r)}) AS edges;`);
     const nodes = result.records[0].get('nodes');
     const edges = result.records[0].get('edges');
 
     console.log('Result from Neo4j:', result);
 
+    console.log("Edges from Neo4j:", edges);
+
+
     const response = {
       nodes: nodes.map(node => ({
-        id: node.id.toString(),
-        label: node.pseudonim + ' [' + node.ime + ', ' + node.godine + ']' + '\n' + node.status || `Čvor ${node.id}`
+        id: node.jmbg,
+        label: node.pseudonim + ' [' + node.ime + ', ' + node.godine + ']' + '\n' + node.status || `Čvor ${node.jmbg}`
       })),
       edges: edges.length > 0 
       ? edges
-              .filter(edge => edge.from && edge.to && edge.from.low !== undefined && edge.to.low !== undefined)
-              .map(edge => ({
-                from: edge.from.low.toString(),
-                to: edge.to.low.toString(),
-                label: edge.label || ""
+            .filter(edge => edge.from && edge.to)
+            .map(edge => ({
+              from: edge.from,
+              to: edge.to,
+              label: edge.label || ""
       }))
       : edges
     };
+    console.log("REZ from Neo4j:", response);
     res.status(200).json(response);
   } catch (error) {
     console.error('Error fetching akteri:', error);
@@ -144,7 +148,7 @@ app.get('/api/incidenti', async (req, res) => {
 app.get('/api/lokacije', async (req, res) => {
   try {
     const result = await session.run(`MATCH (l:Lokacija) OPTIONAL MATCH (l)-[r]->(m:Lokacija) RETURN 
-                                      collect({id: id(l), ime: l.ime, grad: l.grad, drzava: l.drzava}) AS nodes, 
+                                      collect({id: id(l), naziv: l.naziv, grad: l.grad, drzava: l.drzava}) AS nodes, 
                                       collect({from: id(l), to: id(m), label: type(r)}) AS edges;`);
     const nodes = result.records[0].get('nodes');
     const edges = result.records[0].get('edges');
@@ -154,7 +158,7 @@ app.get('/api/lokacije', async (req, res) => {
     const response = {
       nodes: nodes.map(node => ({
         id: node.id.toString(),
-        label: node.ime + '\n' + node.grad + ', ' + node.drzava || `Čvor ${node.id}`
+        label: node.naziv + '\n' + node.grad + ', ' + node.drzava || `Čvor ${node.id}`
       })),
       edges: edges.length > 0 
         ? edges
@@ -212,6 +216,24 @@ app.get('/api/node-types/attributes', async (req, res) => {
 app.post('/api/add-node', async (req, res) => {
   const nodeData = req.body;  // Podaci dobijeni iz klijenta
 
+  if (nodeData.Id) {
+    nodeData.Id = Number(nodeData.Id);
+  
+    if (isNaN(nodeData.Id)) {
+      return res.status(400).json({ error: 'Id mora biti validan broj.' });
+    }
+  }
+
+  if (nodeData.Jmbg) {
+    if (nodeData.Jmbg.length !== 13 || isNaN(nodeData.Jmbg)) {
+      return res.status(400).json({ error: 'JMBG mora biti broj i imati tačno 13 cifara.' });
+    }
+  }
+  
+  // Ako nema Id, nastavi dalje sa obradom
+  // Dalja logika za dodavanje node-a u bazu
+  
+
   if (!nodeData) {
     return res.status(400).json({ error: 'Podaci nisu poslati.' });
   }
@@ -221,11 +243,20 @@ app.post('/api/add-node', async (req, res) => {
   try {
     // Kreiraj čvor u Neo4j sa podacima
     const properties = Object.entries(nodeData)
-  .filter(([key]) => key !== 'type')  // Ignorišemo 'type'
-  .map(([key, value]) => `${key.charAt(0).toLowerCase() + key.slice(1)}: "${value}"`)  // Pretvaramo u string sa malim prvim slovom
-  .join(', ');  // Spajamo sve u jedan string
+            .filter(([key]) => key !== 'type')  // Ignorišemo 'type'
+            .map(([key, value]) => {
+              // Ako je key 'id', konvertuj ga u broj
+              if (key === 'id' && !isNaN(value)) {
+                value = Number(value);  // Parsiraj 'id' kao broj
+              }
+              return `${key.charAt(0).toLowerCase() + key.slice(1)}: ${typeof value === 'number' ? value : `"${value}"`}`;
+            })
+            .join(', ');  // Spajamo sve u jedan string
+
+console.log(properties);
 
     const result = await session.run(`CREATE (n:${nodeData.type} {${properties}}) RETURN n`);
+    // moglo je i sa MERGE gde se izbegavaju duplikati ali mi imamo CONSTRAINTS u bazi i tjt
     
     if (result.records.length > 0) {
       res.status(201).json({ message: 'Element uspešno dodat', node: result.records[0].get(0) });
