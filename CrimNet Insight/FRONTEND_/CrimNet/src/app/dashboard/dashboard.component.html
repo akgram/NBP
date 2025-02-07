@@ -32,6 +32,10 @@
               </div>
             </div>
           </section>
+          <div class="card">
+            <h3 class="card-title">Naslov Kartice</h3>
+            <p class="card-content">Ovde ide neki opis ili podaci koji treba da se prikažu.</p>
+        </div>
     </div>
   
     <div class="center-panel">
@@ -64,7 +68,24 @@
                       <button type="submit">Dodaj</button>
                     </form>
                   </div>
-                </div>              
+                </div>  
+                <div class="modal" *ngIf="showEditNode">
+                  <button class="close-btn" (click)="toggleEditNode()">✖</button>
+                  <div class="modal-content">
+                    <h2>Izmeni Element</h2>
+                    <form (ngSubmit)="editNode()">
+                      <label for="elementType">Tip Elementa:
+                      <span>{{ selectedType || 'Nema selektovanog tipa' }}</span>
+                      </label>
+                
+                      <div *ngFor="let field of nodeAttributes; let i = index">
+                        <label for="additionalInfo{{i}}">{{ field }}:</label>
+                        <input type="text" id="additionalInfo{{i}}" [(ngModel)]="inputFields[i]" [ngModelOptions]="{standalone: true}"/>
+                      </div>
+                      <button type="submit">Izmeni</button>
+                    </form>
+                  </div>
+                </div>            
                 <div class="example-button-container">
                     <button mat-fab extended (click)="toggleAddNode()">
                         <mat-icon>add</mat-icon>
@@ -77,11 +98,9 @@
                         Kreiraj Vezu
                     </button>
                 </div>
-                <div class="example-button-container">
-                    <button mat-fab extended>
-                        <mat-icon>edit</mat-icon>
-                        Izmeni Element
-                    </button>
+                <!-- beleskas -->
+                <div class="note-container">
+                  <textarea class="note-input" placeholder="Unesite belešku..."></textarea>
                 </div>
               </div>
             </div>

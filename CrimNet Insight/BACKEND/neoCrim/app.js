@@ -1,7 +1,14 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const { session } = require('./db');
+const neo4j = require('neo4j-driver');
+
+// connect sa bazom
+const driver = neo4j.driver('bolt://localhost:7687', neo4j.auth.basic('neo4j', 'acavrbaCrim'));
+const session = driver.session();
+const session1 = driver.session();
+
+module.exports = { driver, session };
 
 const app = express();
 const PORT = 3000;
@@ -53,6 +60,7 @@ app.get('/api/baza', async (req, res) => {
                                       // slozeniji upit jer Kriminalac ide preko jmbg-a a ostali preko id-a
                                       // izvlacenje 3 atributa svakog cvora
                                       // type zbog boje na grafu :)
+                                      // ID(n) iz bazu jer moze da se ponavlja isti lokalni id (vozilo id = 1 i inicdent id = 1)
     const nodes = result.records[0].get('nodes');
     const edges = result.records[0].get('edges');
 
@@ -87,7 +95,7 @@ app.get('/api/baza', async (req, res) => {
 app.get('/api/akteri', async (req, res) => {
   try {
     const result = await session.run(`MATCH (n:Kriminalac) OPTIONAL MATCH (n)-[r]->(m:Kriminalac) RETURN 
-                                      collect({jmbg: n.jmbg, pseudonim: n.pseudonim, ime: n.ime, godine: n.godine, status: n.status}) AS nodes, 
+                                      collect({jmbg: n.jmbg, pseudonim: n.pseudonim, ime: n.ime, godine: n.godine, status: n.status, type: head(labels(n))}) AS nodes, 
                                       collect({from: n.jmbg, to: m.jmbg, label: type(r)}) AS edges;`);
     const nodes = result.records[0].get('nodes');
     const edges = result.records[0].get('edges');
@@ -100,7 +108,8 @@ app.get('/api/akteri', async (req, res) => {
     const response = {
       nodes: nodes.map(node => ({
         id: node.jmbg,
-        label: node.pseudonim + ' [' + node.ime + ', ' + node.godine + ']' + '\n' + node.status || `Čvor ${node.jmbg}`
+        label: node.pseudonim + ' [' + node.ime + ', ' + node.godine + ']' + '\n' + node.status || `Čvor ${node.jmbg}`,
+        title: node.type
       })),
       edges: edges.length > 0 
       ? edges
@@ -124,7 +133,7 @@ app.get('/api/akteri', async (req, res) => {
 app.get('/api/vozila', async (req, res) => {
   try {
     const result = await session.run(`MATCH (v:Vozilo) OPTIONAL MATCH (v)-[r]->(m:Vozilo) RETURN 
-                                      collect({id: v.id, registracija: v.registracija}) AS nodes, 
+                                      collect({id: v.id, registracija: v.registracija, type: head(labels(v))}) AS nodes, 
                                       collect({from: v.id, to: m.id, label: type(r)}) AS edges;`);
     const nodes = result.records[0].get('nodes');
     const edges = result.records[0].get('edges');
@@ -134,7 +143,8 @@ app.get('/api/vozila', async (req, res) => {
     const response = {
       nodes: nodes.map(node => ({
         id: node.id.toString(),
-        label: node.registracija || `Čvor ${node.id}`
+        label: node.registracija || `Čvor ${node.id}`,
+        title: node.type
       })),
       edges: edges.length > 0 
         ? edges
@@ -157,7 +167,7 @@ app.get('/api/vozila', async (req, res) => {
 app.get('/api/incidenti', async (req, res) => {
   try {
     const result = await session.run(`MATCH (i:Incident) OPTIONAL MATCH (i)-[r]->(m:Incident) RETURN 
-                                      collect({id: i.id, tip: i.tip, datum: i.datum, opis: i.opis}) AS nodes, 
+                                      collect({id: i.id, tip: i.tip, datum: i.datum, opis: i.opis, type: head(labels(i))}) AS nodes, 
                                       collect({from: i.id, to: m.id, label: type(r)}) AS edges;`);
     const nodes = result.records[0].get('nodes');
     const edges = result.records[0].get('edges');
@@ -167,7 +177,8 @@ app.get('/api/incidenti', async (req, res) => {
     const response = {
       nodes: nodes.map(node => ({
         id: node.id.toString(),
-        label: node.tip + '\n' + node.datum || `Čvor ${node.id}`
+        label: node.tip + '\n' + node.datum || `Čvor ${node.id}`,
+        title: node.type
       })),
       edges: edges.length > 0 
         ? edges
@@ -190,7 +201,7 @@ app.get('/api/incidenti', async (req, res) => {
 app.get('/api/lokacije', async (req, res) => {
   try {
     const result = await session.run(`MATCH (l:Lokacija) OPTIONAL MATCH (l)-[r]->(m:Lokacija) RETURN 
-                                      collect({id: l.id, naziv: l.naziv, grad: l.grad, drzava: l.drzava}) AS nodes, 
+                                      collect({id: l.id, naziv: l.naziv, grad: l.grad, drzava: l.drzava, type: head(labels(l))}) AS nodes, 
                                       collect({from: l.id, to: m.id, label: type(r)}) AS edges;`);
     const nodes = result.records[0].get('nodes');
     const edges = result.records[0].get('edges');
@@ -200,7 +211,8 @@ app.get('/api/lokacije', async (req, res) => {
     const response = {
       nodes: nodes.map(node => ({
         id: node.id.toString(),
-        label: node.naziv + '\n' + node.grad + ', ' + node.drzava || `Čvor ${node.id}`
+        label: node.naziv + '\n' + node.grad + ', ' + node.drzava || `Čvor ${node.id}`,
+        title: node.type
       })),
       edges: edges.length > 0 
         ? edges
@@ -349,6 +361,109 @@ app.delete('/api/delete-node/:id/:type/:title', async (req, res) => {
   } catch (err) {
     console.error('Greška pri brisanju čvora:', err);
     res.status(500).json({ message: 'Greška pri brisanju čvora iz baze', error: err });
+  }
+});
+
+
+
+//API za edit
+app.post('/api/edit-node/:id', async (req, res) => {
+  const nodeData = req.body;  // Podaci dobijeni iz klijenta
+  let selectedID = req.params.id;
+  let query = null;
+  console.log("data: ", nodeData);
+  console.log("ajdi: ", selectedID);
+  let temp = null;
+
+  if (nodeData.id) {
+    if (isNaN(nodeData.id)) {
+      return res.status(400).json({ error: 'Id mora biti validan broj.' });
+    }
+  }
+
+  if (nodeData.jmbg) {
+    if (nodeData.jmbg.length !== 13 || isNaN(nodeData.jmbg)) {
+      return res.status(400).json({ error: 'JMBG mora biti broj i imati tačno 13 cifara.' });
+    }
+  }
+
+  if (!nodeData) {
+    return res.status(400).json({ error: 'Podaci nisu poslati.' });
+  }
+
+  console.log('Podaci koji dolaze:', req.body);
+
+  try {
+    // kreiramo cvor u Neo4j sa podacima
+    const properties = Object.entries(nodeData).filter(([key]) => key !== 'type').map(([key, value]) => {
+    if (key === 'id' && !isNaN(value)) { value = Number(value); }
+    return `n.${key} = ${typeof value === 'number' ? value : `"${value}"`}`;
+  }).join(', ');  // spajamo sve u jedan string
+
+    console.log("Prop: ", properties);
+
+    if(nodeData.type != 'Kriminalac')
+      {
+        selectedID = parseInt(selectedID);
+        query = `MATCH (n:${nodeData.type} {id: $selectedID}) SET ${properties} RETURN n`;
+      }
+      else
+      {
+        selectedID = selectedID.toString();
+        query = `MATCH (n:${nodeData.type} {jmbg: $selectedID}) SET ${properties} RETURN n`;
+      }
+
+    const result = await session.run(query, { selectedID: selectedID, ...nodeData.properties });
+    // moglo je i sa MERGE gde se izbegavaju duplikati ali mi imamo CONSTRAINTS u bazi i tjt
+    console.log("REZ: ", result);
+    
+    if (result.records.length > 0) {
+      res.status(201).json({ message: 'Element uspešno izmenjen', node: result.records[0].get(0) });
+    } else {
+      res.status(400).json({ error: 'Greška pri izmeni elementa.' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+app.get('/api/loadData-node', async (req, res) => {
+  let id = req.query.id;
+  let type = req.query.type;
+
+  if (!id || !type) {
+    return res.status(400).json({ error: 'ID and type are required' });
+  }
+
+  let query = null;
+  if(type == 'Kriminalac')
+  {
+    //id = id.toString();
+    query = `MATCH (n:${type}) WHERE n.jmbg = $id RETURN properties(n) AS properties`;
+  }
+  else
+  {
+    //id = parseInt(id);
+    query = `MATCH (n:${type}) WHERE n.id = $id RETURN properties(n) AS properties`;
+  }
+
+  try {
+
+    const result = await session1.run(query, { id: type === 'Kriminalac' ? id : parseInt(id) }); // posebna sesija, ne znam zasto ali puca onako
+    if (result.records.length > 0) {
+      const nodeProperties = result.records[0].get("properties");
+      console.log(nodeProperties);
+      if(nodeProperties.godine)
+      {
+        nodeProperties.godine = nodeProperties.godine.low;  // ne znam zasto ali za godine vraca Integer { low: xx, high: yy }
+      }
+      res.json(nodeProperties);
+    } else {
+      res.status(404).json({ error: 'Node not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

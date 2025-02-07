@@ -176,7 +176,15 @@ export class DashboardComponent implements OnInit {
         interaction: { hover: true },
         manipulation: { 
           enabled: true,
-          addNode: false,
+          //addNode: false,
+          addNode: (nodeData: any, callback: Function) => {
+            this.toggleAddNode();
+            callback(nodeData);
+          },
+          editNode: (nodeData: any, callback: Function) => {
+            this.toggleEditNode();
+            callback(nodeData);
+          },
           deleteNode: (data: any, callback: Function) => {
             // Prikazivanje dijaloga za potvrdu brisanja čvora
             this.confirmDeleteNode(data, callback); // Ova funkcija prikazuje dijalog
@@ -294,6 +302,37 @@ confirmDeleteNode(data: any, callback: Function): void {
     this.showAddNode = !this.showAddNode;
   }
 
+  showEditNode: boolean = false;
+  toggleEditNode() {
+    if(!this.showEditNode)
+    {
+      this.loadNodeTypes();
+      this.selectedType = this.selectedNode.type;
+      console.log(this.selectedType);
+      this.loadNodeData();
+    }
+    this.showEditNode = !this.showEditNode;
+  }
+
+  loadNodeData() {
+    if (!this.selectedNode) return;
+  
+    this.dataService.loadNodeDataFromDatabase(this.selectedNode.id, this.selectedNode.type)
+    .subscribe({
+      next: (data) => {
+        console.log(data);
+        this.nodeAttributes = Object.keys(data); // Uzimaš sve ključeve objekta kao nazive atributa
+        this.inputFields = Object.values(data); // Uzimaš vrednosti objekta za input polja
+        console.log('Node attributes:', this.nodeAttributes);
+        console.log('Input fields:', this.inputFields);
+      },
+      error: (error) => {
+        console.error('Greška pri učitavanju podataka cvora:', error);
+      }
+    });
+  }  
+  
+
   inputFields: string[] = []; // Polja koja će biti generisana
   // Metoda koja ažurira broj input polja na osnovu izabranog tipa
   updateInputFields() {
@@ -367,6 +406,67 @@ confirmDeleteNode(data: any, callback: Function): void {
           alert('Greška pri odabiru ID-a ili JMBG-a. \nJMBG mora biti 13 cifara!\nID mora biti jedinstven!\nMolimo proverite unete podatke.');
         } else {
           alert('Došlo je do greške pri dodavanju podataka. \nJMBG mora biti 13 cifara! \nID mora biti jedinstven!\nPokušajte ponovo.');
+        }
+
+        this.inputFields = Array(this.nodeAttributes.length).fill('');
+      }
+    });
+  }
+
+  editNode()
+  {
+    if (this.inputFields.length === 0) {
+      console.error('Nema unosa!');
+      return;
+    }
+  
+    // Kreiraj objekat sa podacima za unos sa pravilnim tipom
+    const nodeData: Record<string, string> = this.inputFields.reduce((acc, value, index) => {
+      acc[this.nodeAttributes[index]] = value;
+      return acc;
+    }, {} as Record<string, string>);  // Pravilno inicijalizujemo kao Record<string, string>
+  
+    nodeData['type'] = this.selectedType;
+
+      console.log(nodeData)
+    // Pozivamo DataService koji će slati podatke backendu
+    this.dataService.editNodeToDatabase(nodeData, this.selectedNode.id).subscribe({
+      next: (response) => {
+        console.log('Uspešno izmenjeno:', response);
+        this.toggleEditNode();
+        alert('Uspešno ste izmenili čvor iz baze!');
+
+        if(this.title == 'Kriminalac')
+        {
+          this.onAkteriClick();
+        }
+        else if(this.title == 'Vozilo')
+        {
+          this.onVozilaClick();
+        }
+        else if(this.title == 'Incident')
+        {
+          this.onIncidentiClick();
+        }
+        else if(this.title == 'Lokacija')
+        {
+          this.onLokacijeClick();
+        }
+        else if(this.title == 'Baza')
+          {
+            this.onBazaClick();
+          }
+        // Ovde možeš dodati logiku za uspešno dodavanje, kao što je obaveštenje korisnika
+      },
+      error: (error) => {
+        console.error('Greška pri izmeni:', error);
+        // Obradi grešku ako je potrebno
+        //alert(`Greška: ${error.message}`);
+
+        if (error.message.includes('id') || error.message.includes('jmbg')) {
+          alert('Greška pri odabiru ID-a ili JMBG-a. \nJMBG mora biti 13 cifara!\nID mora biti jedinstven!\nMolimo proverite unete podatke.');
+        } else {
+          alert('Došlo je do greške pri izmeni podataka. \nJMBG mora biti 13 cifara! \nID mora biti jedinstven!\nPokušajte ponovo.');
         }
 
         this.inputFields = Array(this.nodeAttributes.length).fill('');

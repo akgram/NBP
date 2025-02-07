@@ -16,13 +16,21 @@
 
 -malo dizajn cvorova i panela za graf da bude blur
 
+-izmeni element imaa
+
 ----------------------------------------
+
+-kad se klikne na panel odselektuje se cvor ali u kod ostaje taj
+
+-BUG: kad je Baza i selektuje se Kriminalac a zatim Neki drugi tip npr Vozilo, u input
+polja su podaci Kriminalca.
+
+-BUG: kad se addNode preko panel mora da se bira tip iako si vec odabrao kad si 
+kliknuo na addNode. Odgovara samo za title = Baza
 
 -za dodavanje Edge koristimo manipulation grafa
 
--izmeni element
-
--prikaz veza iz baze
+-prikaz veza iz baze??????????
 
 -kartica sa podacima i slika(mozda) aktera kad se klikne na njega sa grafa
 

@@ -43,5 +43,13 @@ export class DataService {
   deleteNodeFromDatabase(nodeId: any, type: string, title: string) {
     return this.http.delete(`/api/delete-node/${nodeId}/${type}/${title}`);
   }
+
+  editNodeToDatabase(nodeData: any, id: any): Observable<any> {
+    return this.http.post(`/api/edit-node/${id}`, nodeData);
+  }
+
+  loadNodeDataFromDatabase(id: any, type: string): Observable<any> {
+    return this.http.get(`/api/loadData-node?id=${id}&type=${type}`);
+  }  
   
 }
