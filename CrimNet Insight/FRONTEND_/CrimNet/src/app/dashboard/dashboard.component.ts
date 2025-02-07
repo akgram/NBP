@@ -23,8 +23,23 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {}
 
+  onBazaClick(): void {
+    this.selectedNode = null;
+    this.title = 'Baza';
+    this.dataService.getBaza().subscribe({
+      next: (response) => {
+        this.data = response;
+        this.drawGraph(response.nodes, response.edges, this.title);
+      },
+      error: (err) => {
+        console.error('Greška prilikom preuzimanja aktera:', err);
+      }
+    });
+  }
+
   onAkteriClick(): void {
-    this.title = 'Akteri';
+    this.selectedNode = null;
+    this.title = 'Kriminalac';
     this.dataService.getAkteri().subscribe({
       next: (response) => {
         this.data = response;
@@ -37,7 +52,8 @@ export class DashboardComponent implements OnInit {
   }
 
   onVozilaClick(): void {
-    this.title = 'Vozila';
+    this.selectedNode = null;
+    this.title = 'Vozilo';
     this.dataService.getVozila().subscribe({
       next: (response) => {
         console.log('Vozila data:', response);  // Dodaj ovo da proveriš šta dobijaš
@@ -51,7 +67,8 @@ export class DashboardComponent implements OnInit {
   }
 
   onIncidentiClick(): void {
-    this.title = 'Incidenti';
+    this.selectedNode = null;
+    this.title = 'Incident';
     this.dataService.getIncidenti().subscribe({
       next: (response) => {
         console.log('Incidenti data:', response);  // Dodaj ovo da proveriš šta dobijaš
@@ -65,7 +82,8 @@ export class DashboardComponent implements OnInit {
   }
 
   onLokacijeClick(): void {
-    this.title = 'Lokacije';
+    this.selectedNode = null;
+    this.title = 'Lokacija';
     this.dataService.getLokacije().subscribe({
       next: (response) => {
         console.log('Lokacije data:', response);  // Dodaj ovo da proveriš šta dobijaš
@@ -80,18 +98,21 @@ export class DashboardComponent implements OnInit {
 
   getNodeColor(title: string) {
     switch (title) {
-      case 'Akteri':
-        return { background: 'pink', border: 'black' };  // Roze za Aktere
-      case 'Incidenti':
-        return { background: 'red', border: 'black' };      // Crveno za Incidenti
-      case 'Vozila':
-        return { background: 'blue', border: 'black' };     // Plavo za Vozila
-      case 'Lokacije':
-        return { background: 'orange', border: 'black' }; // Narandžasto za Lokaciju
+      case 'Kriminalac':
+        return { background: '#b30059', border: 'black' };  // Tamnoroze
+      case 'Incident':
+        return { background: '#800000', border: 'black' };  // Tamnocrveno
+      case 'Vozilo':
+        return { background: '#000080', border: 'black' };  // Tamnoplavo
+      case 'Lokacija':
+        return { background: '#cc5500', border: 'black' };  // Tamnonarandžasto
       default:
-        return { background: 'gray', border: 'black' };        // Podrazumevano (sivo)
+        return { background: '#4d4d4d', border: 'black' };  // Tamnosivo
     }
-  }
+  }  
+
+  selectedNode: any = null;
+  network: any = null;
 
   drawGraph(nodes: any[], edges: any[], title: string): void {
     const container = document.querySelector('.graph');
@@ -103,7 +124,24 @@ export class DashboardComponent implements OnInit {
         const validEdges = edges.filter(edge => edge.to && edge.from);
       }
 
-      const nodesData = new DataSet(nodes || []);
+      let nodesData = null;
+      let clr: any = false;
+
+      if(title === 'Baza')
+      {
+        nodesData = new DataSet(nodes.map(node => ({
+          id: node.id.toString(),
+          label: node.label,
+          title: node.title, 
+          color: this.getNodeColor(node.title) // Svaki čvor dobija svoju boju
+        })));
+
+      }
+      else
+      {
+        clr = this.getNodeColor(title);
+        nodesData = new DataSet(nodes || []);
+      }
       const edgesData = new DataSet(validEdges || []); // vraca sve moguce veze i one sa null pa ih filtriramo da se izbace null veze
 
       console.log('Nodes data:', nodes);
@@ -117,8 +155,8 @@ export class DashboardComponent implements OnInit {
         nodes: {
           shape: 'dot',
           size: 25,
-          font: { size: 15 },
-          color: this.getNodeColor(title),
+          font: { size: 15, color: 'black' },
+          ...(title !== "Baza" && { color: this.getNodeColor(title) }) //kad se pojedinacno zovu tipovi, inace za celu bazu se DataSetuje
         },
         edges: {
           color: 'white',
@@ -129,18 +167,48 @@ export class DashboardComponent implements OnInit {
           enabled: true,
           solver: 'forceAtlas2Based',
           forceAtlas2Based: {
-            gravitationalConstant: -120, // Udaljenost između čvorova
-            centralGravity: 0.01, // Kontroliše privlačnost ka centru
-            springLength: 200, // Dužina veze (proporcionalno rastojanju između čvorova)
+            gravitationalConstant: -120, // udaljenost cvorova
+            centralGravity: 0.01, // privlacnost ka centru
+            springLength: 200, // duzina veze
             springConstant: 0.08
+          }
+        },
+        interaction: { hover: true },
+        manipulation: { 
+          enabled: true,
+          addNode: false,
+          deleteNode: (data: any, callback: Function) => {
+            // Prikazivanje dijaloga za potvrdu brisanja čvora
+            this.confirmDeleteNode(data, callback); // Ova funkcija prikazuje dijalog
           }
         }
       };
   
       // Kreiraj graf samo ako su podaci validni
       if (nodesData.length > 0) {
-        const network = new Network(container as HTMLElement, data, options);
+        this.network = new Network(container as HTMLElement, data, options);
         console.log('Graph initialized');
+
+        //let selectedNode = null; // Držimo selektovani čvor
+
+        // Postavljamo listener za selektovanje čvora
+        this.network.on('selectNode', (event: any) => {
+          this.selectedNode = event.nodes[0]; // Čuvanje ID-a selektovanog čvora
+          const allNodes = nodesData.get();
+          const selectedNodeData = allNodes.find(node => node.id === this.selectedNode);
+          if (selectedNodeData) {
+            this.selectedNode = {
+              id: Number(this.selectedNode),
+              type: selectedNodeData.title, // Tip iz nodesData (Kriminalac, Vozilo...)
+              color: selectedNodeData.color // Boja čvora
+            };
+          } else {
+            this.selectedNode = null;
+          }
+
+          console.log('Selected node:', this.selectedNode);
+        });
+        
       } else {
         console.log('No data to display on graph');
       }
@@ -148,6 +216,39 @@ export class DashboardComponent implements OnInit {
       console.error('Element .graph not found');
     }
   }
+/////////////////////////////////////////////////////////////////////////////////////////
+//delete element
+
+confirmDeleteNode(data: any, callback: Function): void {
+
+  const confirmed = confirm('Da li ste sigurni da zelite da obrisete ovaj element?');
+  
+  if (confirmed) {
+
+    console.log(data);
+
+    if(this.selectedNode.type !== 'Kriminalac')
+    {
+      this.selectedNode.id = this.selectedNode.id.toString();
+    }
+
+    this.dataService.deleteNodeFromDatabase(this.selectedNode.id, this.selectedNode.type, this.title).subscribe(
+      (response) => {
+        console.log('Čvor uspešno obrisan iz baze', response);
+        alert('Element uspešno obrisan iz baze!');
+        this.network.body.data.nodes.remove(this.selectedNode.id);
+      },
+      (error) => {
+        console.error('Došlo je do greške pri brisanju iz baze', error);
+        alert('Došlo je do greške pri brisanju iz baze.');
+      }
+    );
+    callback(data);
+  }
+}
+
+
+
 /////////////////////////////////////////////////////////////////////////////////////////
 //add element
   nodeTypes: string[] = []; // Lista tipova čvorova
@@ -181,16 +282,16 @@ export class DashboardComponent implements OnInit {
   }  
 
 
-  showAddElement: boolean = false;
-  toggleAddElement() {
-    if(!this.showAddElement)
+  showAddNode: boolean = false;
+  toggleAddNode() {
+    if(!this.showAddNode)
     {
       this.loadNodeTypes();
       this.selectedType = '';
       this.inputFields = [];
       this.nodeAttributes = [];
     }
-    this.showAddElement = !this.showAddElement;
+    this.showAddNode = !this.showAddNode;
   }
 
   inputFields: string[] = []; // Polja koja će biti generisana
@@ -212,10 +313,7 @@ export class DashboardComponent implements OnInit {
     this.loadNodeAttributes();
   }
 
-  //elementType: string = '';
-  //additionalInfo: string = '';
-
-  onSubmit() {
+  addNode() {
     if (this.inputFields.length === 0) {
       console.error('Nema unosa!');
       return;
@@ -235,8 +333,29 @@ export class DashboardComponent implements OnInit {
       next: (response) => {
         console.log('Uspešno dodato:', response);
         this.inputFields = Array(this.nodeAttributes.length).fill('');
-        this.toggleAddElement();
+        this.toggleAddNode();
         alert('Uspešno ste dodali čvor u bazu!');
+
+        if(this.title == 'Kriminalac')
+        {
+          this.onAkteriClick();
+        }
+        else if(this.title == 'Vozilo')
+        {
+          this.onVozilaClick();
+        }
+        else if(this.title == 'Incident')
+        {
+          this.onIncidentiClick();
+        }
+        else if(this.title == 'Lokacija')
+        {
+          this.onLokacijeClick();
+        }
+        else if(this.title == 'Baza')
+          {
+            this.onBazaClick();
+          }
         // Ovde možeš dodati logiku za uspešno dodavanje, kao što je obaveštenje korisnika
       },
       error: (error) => {

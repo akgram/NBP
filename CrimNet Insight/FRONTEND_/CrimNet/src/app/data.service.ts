@@ -8,6 +8,10 @@ import { Observable } from 'rxjs';
 export class DataService {
   constructor(private http: HttpClient) {}
 
+  getBaza(): Observable<any> {
+    return this.http.get('/api/baza');
+  }
+
   getAkteri(): Observable<any> {
     return this.http.get('/api/akteri');
   }
@@ -34,6 +38,10 @@ export class DataService {
 
   addNodeToDatabase(nodeData: any): Observable<any> {
     return this.http.post('/api/add-node', nodeData);
+  }
+
+  deleteNodeFromDatabase(nodeId: any, type: string, title: string) {
+    return this.http.delete(`/api/delete-node/${nodeId}/${type}/${title}`);
   }
   
 }

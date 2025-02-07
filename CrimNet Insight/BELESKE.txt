@@ -1,18 +1,29 @@
-
+-poteskoce pri izradi zbog jmbg-a
 
 -CREATE komande za kreiranje baze
 -pozadina
 
 -dodavanje radiii, malo optimizacija i tjt
 
+-dodavanje full, brisanje full
+
+
+-TITLE = BAZA JE PROBLEM KOD BRISANJE PREKO GRAFA, resenoooo :)
+
+-brisanje kad je title==Baza ide preko ID(n) a inace preko n.id ili n.jmbg
+
+-prikaz cele baze imaa
+
+-malo dizajn cvorova i panela za graf da bude blur
+
 ----------------------------------------
+
+-za dodavanje Edge koristimo manipulation grafa
+
+-izmeni element
 
 -prikaz veza iz baze
 
--desni deo za brisanje, dodavanje, izmenu i vezivanje
-
 -kartica sa podacima i slika(mozda) aktera kad se klikne na njega sa grafa
-
--dizajn panela za graf
 
 -deo za dodavanje izvestaja od strane korisnika (inspektora npr) i taj deo je vidljiv na stranici

@@ -41,6 +41,48 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+app.get('/api/baza', async (req, res) => {
+  try {
+    const result = await session.run(`MATCH (n) WHERE NOT n:User OPTIONAL MATCH (n)-[r]->(m) RETURN 
+                                      collect(DISTINCT {id: CASE WHEN n:Kriminalac THEN n.jmbg ELSE ID(n) END,
+                                                        type: head(labels(n)),
+                                                        atr1: coalesce(n[keys(n)[1]], null),
+                                                        atr2: coalesce(n[keys(n)[2]], null),
+                                                        atr3: coalesce(n[keys(n)[3]], null)}) AS nodes, 
+                                      collect(DISTINCT {from: CASE WHEN n:Kriminalac THEN n.jmbg ELSE ID(n) END, to: CASE WHEN m:Kriminalac THEN m.jmbg ELSE ID(m) END, label: type(r)}) AS edges`);
+                                      // slozeniji upit jer Kriminalac ide preko jmbg-a a ostali preko id-a
+                                      // izvlacenje 3 atributa svakog cvora
+                                      // type zbog boje na grafu :)
+    const nodes = result.records[0].get('nodes');
+    const edges = result.records[0].get('edges');
+
+    console.log('Result from Neo4j:', result);
+
+    const response = {
+      nodes: nodes.map(node => ({
+        id: node.id.toString(),
+        label: node.atr1 + " [" + node.atr2 + "]" + "\n" + node.atr3 + "\n" + node.type, // + "\n" +`Čvor ${node.id}`
+        title: node.type
+      })),
+      edges: edges.length > 0 
+      ? edges
+          .filter(edge => edge.from && edge.to)
+          .map(edge => ({
+            from: edge.from.low !== undefined ? edge.from.low.toString() : edge.from,
+            to: edge.to.low !== undefined ? edge.to.low.toString() : edge.to,
+            label: edge.label || ""
+          }))
+      : edges
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error fetching data from Neo4j:', error);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+});
+
+
 // Ruta za aktere (kriminalce)
 app.get('/api/akteri', async (req, res) => {
   try {
@@ -82,8 +124,8 @@ app.get('/api/akteri', async (req, res) => {
 app.get('/api/vozila', async (req, res) => {
   try {
     const result = await session.run(`MATCH (v:Vozilo) OPTIONAL MATCH (v)-[r]->(m:Vozilo) RETURN 
-                                      collect({id: id(v), registracija: v.registracija}) AS nodes, 
-                                      collect({from: id(v), to: id(m), label: type(r)}) AS edges;`);
+                                      collect({id: v.id, registracija: v.registracija}) AS nodes, 
+                                      collect({from: v.id, to: m.id, label: type(r)}) AS edges;`);
     const nodes = result.records[0].get('nodes');
     const edges = result.records[0].get('edges');
 
@@ -115,8 +157,8 @@ app.get('/api/vozila', async (req, res) => {
 app.get('/api/incidenti', async (req, res) => {
   try {
     const result = await session.run(`MATCH (i:Incident) OPTIONAL MATCH (i)-[r]->(m:Incident) RETURN 
-                                      collect({id: id(i), tip: i.tip, datum: i.datum, opis: i.opis}) AS nodes, 
-                                      collect({from: id(i), to: id(m), label: type(r)}) AS edges;`);
+                                      collect({id: i.id, tip: i.tip, datum: i.datum, opis: i.opis}) AS nodes, 
+                                      collect({from: i.id, to: m.id, label: type(r)}) AS edges;`);
     const nodes = result.records[0].get('nodes');
     const edges = result.records[0].get('edges');
 
@@ -148,8 +190,8 @@ app.get('/api/incidenti', async (req, res) => {
 app.get('/api/lokacije', async (req, res) => {
   try {
     const result = await session.run(`MATCH (l:Lokacija) OPTIONAL MATCH (l)-[r]->(m:Lokacija) RETURN 
-                                      collect({id: id(l), naziv: l.naziv, grad: l.grad, drzava: l.drzava}) AS nodes, 
-                                      collect({from: id(l), to: id(m), label: type(r)}) AS edges;`);
+                                      collect({id: l.id, naziv: l.naziv, grad: l.grad, drzava: l.drzava}) AS nodes, 
+                                      collect({from: l.id, to: m.id, label: type(r)}) AS edges;`);
     const nodes = result.records[0].get('nodes');
     const edges = result.records[0].get('edges');
 
@@ -189,6 +231,8 @@ app.get('/api/node-types', async (req, res) => {
   }
 });
 
+
+
 app.get('/api/node-types/attributes', async (req, res) => {
   const { type } = req.query; // Uzmi 'type' iz query string-a
 
@@ -211,6 +255,8 @@ app.get('/api/node-types/attributes', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+
 
 // API endpoint za dodavanje elementa
 app.post('/api/add-node', async (req, res) => {
@@ -269,7 +315,45 @@ console.log(properties);
 });
 
 
-// Pokretanje servera
+// API za brisanje cvora iz Neo4j baze
+app.delete('/api/delete-node/:id/:type/:title', async (req, res) => {
+  let nodeId = null;
+  let cypherQuery = null;
+
+  console.log("paramsi: ", req.params);
+
+  if(req.params.type !== 'Kriminalac')
+  {
+    nodeId = Number(req.params.id);
+    if(req.params.title === 'Baza')
+    {
+      cypherQuery = `MATCH (n) WHERE ID(n) = $nodeId DELETE n`;
+    }
+    else
+    {
+      cypherQuery = `MATCH (n) WHERE n.id = $nodeId DELETE n`;
+    }
+  }
+  else
+  {
+    nodeId = req.params.id.toString();
+    cypherQuery = `MATCH (n) WHERE n.jmbg = $nodeId DELETE n`;
+  }
+
+  //console.log("nodeid: ", nodeId);
+
+  try {
+    await session.run(cypherQuery, { nodeId: nodeId });
+    
+    res.status(200).json({ message: 'Čvor obrisan iz Neo4j baze' });
+  } catch (err) {
+    console.error('Greška pri brisanju čvora:', err);
+    res.status(500).json({ message: 'Greška pri brisanju čvora iz baze', error: err });
+  }
+});
+
+
+// server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

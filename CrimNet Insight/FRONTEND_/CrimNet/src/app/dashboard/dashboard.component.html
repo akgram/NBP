@@ -23,6 +23,12 @@
                       Incidenti
                     </button>
                 </div>
+                <div class="example-button-container">
+                  <button mat-fab extended (click)="onBazaClick()">
+                    <mat-icon>person</mat-icon>
+                    BAZA
+                  </button>
+              </div>
               </div>
             </div>
           </section>
@@ -30,7 +36,7 @@
   
     <div class="center-panel">
       <div class="graph">
-        <!-- Mesto za graf iz Neo4j baze -->
+        <!-- graf iz baze --->
         
       </div>
     </div>
@@ -39,11 +45,11 @@
         <section>
             <div class="example-button-row">
               <div class="example-flex-container">
-                <div class="modal" *ngIf="showAddElement">
-                  <button class="close-btn" (click)="toggleAddElement()">✖</button>
+                <div class="modal" *ngIf="showAddNode">
+                  <button class="close-btn" (click)="toggleAddNode()">✖</button>
                   <div class="modal-content">
                     <h2>Dodaj Element</h2>
-                    <form (ngSubmit)="onSubmit()">
+                    <form (ngSubmit)="addNode()">
                       <label for="elementType">Tip Elementa:</label>
                       <select id="elementType" name="elementType" [(ngModel)]="selectedType" (change)="updateInputFields()">
                         <option value="">Izaberite tip elementa</option>
@@ -60,15 +66,9 @@
                   </div>
                 </div>              
                 <div class="example-button-container">
-                    <button mat-fab extended (click)="toggleAddElement()">
+                    <button mat-fab extended (click)="toggleAddNode()">
                         <mat-icon>add</mat-icon>
                         Dodaj Element
-                    </button>
-                </div>
-                <div class="example-button-container">
-                    <button mat-fab extended>
-                        <mat-icon>remove</mat-icon>
-                        Ukloni Element
                     </button>
                 </div>
                 <div class="example-button-container">
