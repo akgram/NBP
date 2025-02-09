@@ -52,17 +52,17 @@
   }
   
   .center-panel {
-    width: 60%;
-    height: 55%;
+    width: 80%;
+    height: 90%;
     display: flex;
     justify-content: center;
     align-items: center;
-    border: 5px solid rgba(255, 255, 255, 0.2); /* Blaga providna ivica */
+    border: 2px solid rgba(255, 255, 255, 0.2); /* Blaga providna ivica */
     border-radius: 10px;
-    padding: 20px;
+    padding: 7px;
     background: rgba(255, 255, 255, 0.1); /* Blago providna bela */
-    backdrop-filter: blur(10px); /* Efekat zamagljenja pozadine */
-    -webkit-backdrop-filter: blur(10px); /* Podrška za Safari */
+    backdrop-filter: blur(4px); /* Efekat zamagljenja pozadine */
+    -webkit-backdrop-filter: blur(4px); /* Podrška za Safari */
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Blaga senka */
   }
   

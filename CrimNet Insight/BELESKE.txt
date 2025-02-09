@@ -31,11 +31,11 @@ polja su podaci Kriminalca. // RESENO
 
 -za dodavanje Edge koristimo manipulation grafa // RESENO
 
+-delete edge i delete node ide na isti button // RESENOOO
+
+-update za veze i to je to // RESENOOO
+
 ----------------------------------------
-
--delete edge i delete node ide na isti button
-
--update za veze i to je to
 
 -DOCKEEEER
 

@@ -305,7 +305,7 @@ app.post('/api/add-node', async (req, res) => {
             .filter(([key]) => key !== 'type')  // Ignorišemo 'type'
             .map(([key, value]) => {
               // Ako je key 'id', konvertuj ga u broj
-              if (key === 'id' && key === 'godine' && !isNaN(value)) {
+              if ((key === 'id' || key === 'godine') && !isNaN(value)) {
                 value = Number(value);  // Parsiraj 'id' kao broj
               }
               return `${key.charAt(0).toLowerCase() + key.slice(1)}: ${typeof value === 'number' ? value : `"${value}"`}`;
@@ -371,17 +371,17 @@ app.delete('/api/delete-node/:id/:type/:title', async (req, res) => {
     nodeId = Number(req.params.id);
     if(req.params.title === 'Baza')
     {
-      cypherQuery = `MATCH (n) WHERE ID(n) = $nodeId DELETE n`;
+      cypherQuery = `MATCH (n) WHERE ID(n) = $nodeId OPTIONAL MATCH (n)-[r]-() DELETE r, n`;
     }
     else
     {
-      cypherQuery = `MATCH (n) WHERE n.id = $nodeId DELETE n`;
+      cypherQuery = `MATCH (n) WHERE n.id = $nodeId OPTIONAL MATCH (n)-[r]-() DELETE r, n`;
     }
   }
   else
   {
     nodeId = req.params.id.toString();
-    cypherQuery = `MATCH (n) WHERE n.jmbg = $nodeId DELETE n`;
+    cypherQuery = `MATCH (n) WHERE n.jmbg = $nodeId OPTIONAL MATCH (n)-[r]-() DELETE r, n`;
   }
 
   //console.log("nodeid: ", nodeId);
@@ -408,15 +408,19 @@ app.post('/api/edit-node/:id', async (req, res) => {
 
   if (nodeData.id) {
     if (isNaN(nodeData.id)) {
-      return res.status(400).json({ error: 'Id mora biti validan broj.' });
+      return res.status(400).json({ message: 'Id mora biti validan broj.' });
     }
   }
 
   if (nodeData.jmbg) {
     if (nodeData.jmbg.length !== 13 || isNaN(nodeData.jmbg)) {
-      return res.status(400).json({ error: 'JMBG mora biti broj i imati tačno 13 cifara.' });
+      return res.status(400).json({ message: 'JMBG mora biti broj i imati tačno 13 cifara.' });
+    }
+    if (isNaN(nodeData.Godine) || nodeData.Godine < 5 || nodeData.Godine > 135) {
+      return res.status(400).json({ message: 'Godine moraju biti validan broj. [5-135]' });
     }
   }
+  
 
   if (!nodeData) {
     return res.status(400).json({ error: 'Podaci nisu poslati.' });
@@ -427,7 +431,7 @@ app.post('/api/edit-node/:id', async (req, res) => {
   try {
     // kreiramo cvor u Neo4j sa podacima
     const properties = Object.entries(nodeData).filter(([key]) => key !== 'type').map(([key, value]) => {
-    if (key === 'id' && !isNaN(value)) { value = Number(value); }
+    if ((key === 'id' || key === 'godine') && !isNaN(value)) { value = Number(value); }
     return `n.${key} = ${typeof value === 'number' ? value : `"${value}"`}`;
   }).join(', ');  // spajamo sve u jedan string
 
@@ -580,6 +584,203 @@ app.post('/api/add-edge/:from/:to', async (req, res) => {
       const node1 = result.records[0].get('n1').properties;
       const node2 = result.records[0].get('n2').properties;
       return res.status(200).json({ message: 'Veza uspešno dodata.', node1, node2 });
+    } else {
+      return res.status(404).json({ error: 'Čvorovi nisu pronađeni u bazi.' });
+    }
+
+  } catch (error) {
+    console.error('Greška prilikom dodavanja ivice:', error);
+    return res.status(500).json({ error: 'Greška prilikom dodavanja ivice.' });
+  }
+
+});
+
+app.delete('/api/delete-edge/:sourceNodeId/:sourceNodeType/:targetNodeId/:targetNodeType/:title', async (req, res) => {
+
+  let sourceNodeId = req.params.sourceNodeId;
+  let targetNodeId = req.params.targetNodeId;
+  let title = req.params.title;
+  let sourceNodeType = req.params.sourceNodeType;
+  let targetNodeType = req.params.targetNodeType;
+  let cypherQuery = null;
+
+  console.log("paramsi: ", req.params);
+
+  if(title === 'Kriminalac') // title = Kriminalac
+  {
+    sourceNodeId = sourceNodeId.toString();
+    targetNodeId = targetNodeId.toString();
+    cypherQuery = `MATCH (n1:Kriminalac {jmbg: $sourceNodeId})-[r]->(n2:Kriminalac {jmbg: $targetNodeId}) DELETE r`;
+  }
+  else if(title !== 'Baza') // title = Vozilo || Lokacija || Incident
+  {
+    sourceNodeId = parseInt(sourceNodeId);
+    targetNodeId = parseInt(targetNodeId);
+    cypherQuery = `MATCH (n1:${title} {id: $sourceNodeId})-[r]->(n2:${title} {id: $targetNodeId}) DELETE r`;
+  }
+  else if(sourceNodeType === 'Kriminalac' && targetNodeType !== 'Kriminalac') // title = Baza i brise se veza izmedju Kriminalca i nekog drugog
+  {
+    sourceNodeId = sourceNodeId.toString();
+    targetNodeId = parseInt(targetNodeId);
+    cypherQuery = `MATCH (n1)-[r]->(n2) WHERE n1.jmbg = $sourceNodeId AND ID(n2) = $targetNodeId DELETE r`;
+  }
+  else if(sourceNodeType !== 'Kriminalac' && targetNodeType === 'Kriminalac') // title = Baza i brise se veza izmedju nekog prvog i Kriminalca
+  {
+    sourceNodeId = parseInt(sourceNodeId);
+    targetNodeId = targetNodeId.toString();
+    cypherQuery = `MATCH (n1)-[r]->(n2) WHERE ID(n1) = $sourceNodeId AND n2.jmbg = $targetNodeId DELETE r`;
+  }
+  else if(sourceNodeType !== 'Kriminalac' && targetNodeType !== 'Kriminalac') // title = Baza i brise se veza izmedju nekog prvog i Kriminalca
+  {
+    sourceNodeId = parseInt(sourceNodeId);
+    targetNodeId = parseInt(targetNodeId);
+    cypherQuery = `MATCH (n1)-[r]->(n2) WHERE ID(n1) = $sourceNodeId AND ID(n2) = $targetNodeId DELETE r`;
+  }
+
+  try {
+    await session.run(cypherQuery, { sourceNodeId: sourceNodeId,  targetNodeId: targetNodeId});
+    
+    res.status(200).json({ message: 'Veza obrisana iz baze' });
+  } catch (err) {
+    console.error('Greška pri brisanju veze:', err);
+    res.status(500).json({ message: 'Greška pri brisanju veze iz baze', error: err });
+  }
+});
+
+app.post('/api/edit-edge/:name/:sourceNodeId/:sourceNodeType/:targetNodeId/:targetNodeType/:from/:to', async (req, res) => {
+  console.log("kveri: ", req.query);
+  console.log("Paramsovi: ", req.params);
+  console.log("imeovi: ", req.body);
+
+  let { name, sourceNodeId, sourceNodeType, targetNodeId, targetNodeType, from, to} = req.params;
+  let {type1, type2, baza} = req.body;
+  let query = null;
+
+  //STARA VEZA
+  if(sourceNodeType == 'Kriminalac')
+  {
+    sourceNodeId = sourceNodeId.toString();
+  }
+  else
+  {
+    sourceNodeId = parseInt(sourceNodeId);
+  }
+
+  if(targetNodeType == 'Kriminalac')
+  {
+    targetNodeId = targetNodeId.toString();
+  }
+  else
+  {
+    targetNodeId = parseInt(targetNodeId);
+  }
+
+
+  //NOVA VEZA
+  if(type1 == 'Kriminalac')
+  {
+    from = from.toString();
+  }
+  else
+  {
+    from = parseInt(from);
+  }
+
+  if(type2 == 'Kriminalac')
+  {
+    to = to.toString();
+  }
+  else
+  {
+    to = parseInt(to);
+  }
+  if(sourceNodeType === type1 && targetNodeType === type2)
+  {
+    if(sourceNodeId === from)
+    {
+      if(sourceNodeType === 'Kriminalac' && targetNodeType === 'Kriminalac')
+      {
+        query = `MATCH (n1:Kriminalac {jmbg: $sourceNodeId})-[r]->(n2:Kriminalac {jmbg: $targetNodeId}), (n3:Kriminalac {jmbg: $to})
+                  WITH r, n1, n2, n3 
+                  DELETE r 
+                  CREATE (n1)-[:${name}]->(n3) RETURN n1, n3`;
+      }
+      else if(sourceNodeType === 'Kriminalac' && targetNodeType !== 'Kriminalac')
+      {
+        query = `MATCH (n1:Kriminalac {jmbg: $sourceNodeId})-[r]->(n2:${targetNodeType} {id: $targetNodeId}), (n3:${type2} {id: $to})
+                  WITH r, n1, n2, n3
+                  DELETE r 
+                  CREATE (n1)-[:${name}]->(n3) RETURN n1, n3`;
+      }
+      else if(sourceNodeType !== 'Kriminalac' && targetNodeType === 'Kriminalac')
+      {
+        query = `MATCH (n1:${sourceNodeType} {id: $sourceNodeId})-[r]->(n2:Kriminalac {jmbg: $targetNodeId}), (n3:Kriminalac {jmbg: $to})
+                  WITH r, n1, n2, n3
+                  DELETE r 
+                  CREATE (n1)-[:${name}]->(n3) RETURN n1, n3`;
+      }
+      else if(sourceNodeType !== 'Kriminalac' && targetNodeType !== 'Kriminalac')
+      {
+        query = `MATCH (n1:${sourceNodeType} {id: $sourceNodeId})-[r]->(n2:${targetNodeType} {id: $targetNodeId}), (n3:${type2} {id: $to})
+                  WITH r, n1, n2, n3
+                  DELETE r 
+                  CREATE (n1)-[:${name}]->(n3) RETURN n1, n3`;
+      }
+    }
+    else if(targetNodeId === to)
+    {
+      if(sourceNodeType === 'Kriminalac' && targetNodeType === 'Kriminalac')
+        {
+          query = `MATCH (n1:Kriminalac {jmbg: $sourceNodeId})-[r]->(n2:Kriminalac {jmbg: $targetNodeId}), (n3:Kriminalac {jmbg: $from})
+                    WITH r, n1, n2, n3 
+                    DELETE r 
+                    CREATE (n3)-[:${name}]->(n2) RETURN n3, n2`;
+        }
+        else if(sourceNodeType === 'Kriminalac' && targetNodeType !== 'Kriminalac')
+        {
+          query = `MATCH (n1:Kriminalac {jmbg: $sourceNodeId})-[r]->(n2:${targetNodeType} {id: $targetNodeId}), (n3:Kriminalac {jmbg: $from})
+                    WITH r, n1, n2, n3
+                    DELETE r 
+                    CREATE (n3)-[:${name}]->(n2) RETURN n3, n2`;
+        }
+        else if(sourceNodeType !== 'Kriminalac' && targetNodeType === 'Kriminalac')
+        {
+          query = `MATCH (n1:${sourceNodeType} {id: $sourceNodeId})-[r]->(n2:Kriminalac {jmbg: $targetNodeId}), (n3:${type1} {id: $from})
+                    WITH r, n1, n2, n3
+                    DELETE r 
+                    CREATE (n3)-[:${name}]->(n2) RETURN n3, n2`;
+        }
+        else if(sourceNodeType !== 'Kriminalac' && targetNodeType !== 'Kriminalac')
+        {
+          query = `MATCH (n1:${sourceNodeType} {id: $sourceNodeId})-[r]->(n2:${targetNodeType} {id: $targetNodeId}), (n3:${type1} {id: $from})
+                    WITH r, n1, n2, n3
+                    DELETE r 
+                    CREATE (n3)-[:${name}]->(n2) RETURN n3, n2`;
+        }
+    }
+  }
+  else
+  {
+    return res.status(400).json({ message: 'Veza može biti promenjena samo između čvorova istog tipa.' });
+  }
+
+
+
+  console.log("QQQQQ: ", query);
+
+  console.log("t1, from: ", type1);
+  console.log(from);
+  console.log("t2, to: ", type2);
+  console.log(to)
+
+  try {
+    
+    const result = await session.run(query, { sourceNodeId, targetNodeId, from, to, name });
+
+    console.log(result.records);
+
+    if (result.records.length > 0) {
+      return res.status(200).json({ message: 'Veza uspešno dodata!'});
     } else {
       return res.status(404).json({ error: 'Čvorovi nisu pronađeni u bazi.' });
     }

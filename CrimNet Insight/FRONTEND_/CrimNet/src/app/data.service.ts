@@ -56,5 +56,14 @@ export class DataService {
     const body = {edgeName, type1, type2, baza}
     return this.http.post(`/api/add-edge/${from}/${to}`, body);
   }
+
+  deleteEdgeFromDatabase(sourceNodeId:any, sourceNodeType:any, targetNodeId: any, targetNodeType: any, title: string) {
+    return this.http.delete(`/api/delete-edge/${sourceNodeId}/${sourceNodeType}/${targetNodeId}/${targetNodeType}/${title}`);
+  }
+
+  editEdgeToDatabase(name: any, sourceNodeId: any, sourceNodeType: any, targetNodeId: any, targetNodeType: any, from: any, to: any, type1: any, type2: any, baza: any): Observable<any> {
+    const body = {type1, type2, baza}
+    return this.http.post(`/api/edit-edge/${name}/${sourceNodeId}/${sourceNodeType}/${targetNodeId}/${targetNodeType}/${from}/${to}`, body);
+  }
   
 }
