@@ -48,8 +48,13 @@ export class DataService {
     return this.http.post(`/api/edit-node/${id}`, nodeData);
   }
 
-  loadNodeDataFromDatabase(id: any, type: string): Observable<any> {
-    return this.http.get(`/api/loadData-node?id=${id}&type=${type}`);
-  }  
+  loadNodeDataFromDatabase(id: any, type: string, title: string): Observable<any> {
+    return this.http.get(`/api/loadData-node?id=${id}&type=${type}&title=${title}`);
+  }
+
+  addEdgeToDatabase(from: any, to: any, edgeName: any, type1: any, type2: any, baza: any): Observable<any> {
+    const body = {edgeName, type1, type2, baza}
+    return this.http.post(`/api/add-edge/${from}/${to}`, body);
+  }
   
 }

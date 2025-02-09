@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const neo4j = require('neo4j-driver');
+const e = require('express');
 
 // connect sa bazom
 const driver = neo4j.driver('bolt://localhost:7687', neo4j.auth.basic('neo4j', 'acavrbaCrim'));
@@ -274,23 +275,23 @@ app.get('/api/node-types/attributes', async (req, res) => {
 app.post('/api/add-node', async (req, res) => {
   const nodeData = req.body;  // Podaci dobijeni iz klijenta
 
+  console.log(nodeData);
   if (nodeData.Id) {
     nodeData.Id = Number(nodeData.Id);
   
     if (isNaN(nodeData.Id)) {
-      return res.status(400).json({ error: 'Id mora biti validan broj.' });
+      return res.status(400).json({ message: 'Id mora biti validan broj.' });
     }
   }
 
   if (nodeData.Jmbg) {
     if (nodeData.Jmbg.length !== 13 || isNaN(nodeData.Jmbg)) {
-      return res.status(400).json({ error: 'JMBG mora biti broj i imati tačno 13 cifara.' });
+      return res.status(400).json({ message: 'JMBG mora biti broj i imati tačno 13 cifara.' });
+    }
+    if (isNaN(nodeData.Godine) || nodeData.Godine < 5 || nodeData.Godine > 135) {
+      return res.status(400).json({ message: 'Godine moraju biti validan broj. [5-135]' });
     }
   }
-  
-  // Ako nema Id, nastavi dalje sa obradom
-  // Dalja logika za dodavanje node-a u bazu
-  
 
   if (!nodeData) {
     return res.status(400).json({ error: 'Podaci nisu poslati.' });
@@ -304,25 +305,56 @@ app.post('/api/add-node', async (req, res) => {
             .filter(([key]) => key !== 'type')  // Ignorišemo 'type'
             .map(([key, value]) => {
               // Ako je key 'id', konvertuj ga u broj
-              if (key === 'id' && !isNaN(value)) {
+              if (key === 'id' && key === 'godine' && !isNaN(value)) {
                 value = Number(value);  // Parsiraj 'id' kao broj
               }
               return `${key.charAt(0).toLowerCase() + key.slice(1)}: ${typeof value === 'number' ? value : `"${value}"`}`;
             })
             .join(', ');  // Spajamo sve u jedan string
 
-console.log(properties);
+    console.log(properties);
 
     const result = await session.run(`CREATE (n:${nodeData.type} {${properties}}) RETURN n`);
     // moglo je i sa MERGE gde se izbegavaju duplikati ali mi imamo CONSTRAINTS u bazi i tjt
     
     if (result.records.length > 0) {
       res.status(201).json({ message: 'Element uspešno dodat', node: result.records[0].get(0) });
+      console.log("lol kako bre");
     } else {
-      res.status(400).json({ error: 'Greška pri dodavanju elementa.' });
+      if(nodeData.Id)
+      {
+        return res.status(400).json({ message: 'Vec postoji element sa zadatim ID-em.' });
+      }
+      else if(nodeData.Jmbg)
+      {
+        const copy = await session.run(`MATCH (n:${nodeData.type} {jmbg : ${nodeData.Jmbg}}) RETURN n`);
+
+        const existingNode = copy.records[0].get('n').properties;
+        const formattedMessage = `${existingNode.Ime} [${existingNode.Pseudonim}] - ${existingNode.jmbg}`;
+
+        console.log(formattedMessage);
+
+        return res.status(400).json({ message: `Zadati JMBG već postoji u bazi: ${formattedMessage}` });
+      }
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    //res.status(500).json({ error: error.message });
+    if(nodeData.Id)
+      {
+        return res.status(400).json({ message: 'Vec postoji element sa zadatim ID-em.' });
+      }
+      else if(nodeData.Jmbg)
+      {
+        const copy = await session1.run(`MATCH (n:${nodeData.type} {jmbg: $jmbg}) RETURN n`, { jmbg: nodeData.Jmbg });
+        console.log(copy.records);
+
+        const existingNode = copy.records[0].get('n').properties;
+        const formattedMessage = `${existingNode.ime} [${existingNode.pseudonim}] - ${existingNode.jmbg}`;
+
+        console.log(formattedMessage);
+
+        return res.status(400).json({ message: `Zadati JMBG već postoji u bazi! \n ${formattedMessage}` });
+      }
   }
 });
 
@@ -368,12 +400,11 @@ app.delete('/api/delete-node/:id/:type/:title', async (req, res) => {
 
 //API za edit
 app.post('/api/edit-node/:id', async (req, res) => {
-  const nodeData = req.body;  // Podaci dobijeni iz klijenta
+  const nodeData = req.body;
   let selectedID = req.params.id;
   let query = null;
   console.log("data: ", nodeData);
   console.log("ajdi: ", selectedID);
-  let temp = null;
 
   if (nodeData.id) {
     if (isNaN(nodeData.id)) {
@@ -431,6 +462,10 @@ app.post('/api/edit-node/:id', async (req, res) => {
 app.get('/api/loadData-node', async (req, res) => {
   let id = req.query.id;
   let type = req.query.type;
+  let title = req.query.title;
+
+  console.log("type: ", type);
+  console.log("id: ", id);
 
   if (!id || !type) {
     return res.status(400).json({ error: 'ID and type are required' });
@@ -439,25 +474,38 @@ app.get('/api/loadData-node', async (req, res) => {
   let query = null;
   if(type == 'Kriminalac')
   {
-    //id = id.toString();
     query = `MATCH (n:${type}) WHERE n.jmbg = $id RETURN properties(n) AS properties`;
   }
   else
   {
-    //id = parseInt(id);
-    query = `MATCH (n:${type}) WHERE n.id = $id RETURN properties(n) AS properties`;
+    if(title == 'Baza')
+    {
+      query = `MATCH (n:${type}) WHERE ID(n) = $id RETURN properties(n) AS properties`;
+    }
+    else
+    {
+      query = `MATCH (n:${type}) WHERE n.id = $id RETURN properties(n) AS properties`;
+    }
+    id = parseInt(id);
   }
 
   try {
 
-    const result = await session1.run(query, { id: type === 'Kriminalac' ? id : parseInt(id) }); // posebna sesija, ne znam zasto ali puca onako
+    const result = await session1.run(query, { id }); // posebna sesija, ne znam zasto ali puca onako
     if (result.records.length > 0) {
       const nodeProperties = result.records[0].get("properties");
       console.log(nodeProperties);
+
       if(nodeProperties.godine)
       {
         nodeProperties.godine = nodeProperties.godine.low;  // ne znam zasto ali za godine vraca Integer { low: xx, high: yy }
       }
+
+      if(title == 'Baza' && nodeProperties.id)
+        {
+          nodeProperties.id = nodeProperties.id.low;  // ne znam zasto ali za godine vraca Integer { low: xx, high: yy }
+        }
+
       res.json(nodeProperties);
     } else {
       res.status(404).json({ error: 'Node not found' });
@@ -465,6 +513,82 @@ app.get('/api/loadData-node', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+app.post('/api/add-edge/:from/:to', async (req, res) => {
+  console.log("kveri: ", req.query);
+  console.log("Paramsovi: ", req.params);
+  console.log("imeovi: ", req.body);
+
+  let {from, to} = req.params;
+  let {edgeName, type1, type2, baza} = req.body;
+  let query = null;
+
+  if(type1 == 'Kriminalac')
+  {
+    from = from.toString();
+  }
+  else
+  {
+    from = parseInt(from);
+  }
+
+  if(type2 == 'Kriminalac')
+  {
+    to = to.toString();
+  }
+  else
+  {
+    to = parseInt(to);
+  }
+
+  if(baza && type1 != 'Kriminalac' && type2 == 'Kriminalac')
+  {
+    query = `MATCH (n1:${type1}), (n2:${type2}) WHERE ID(n1) = $from AND n2.jmbg = $to CREATE (n1)-[:${edgeName}]->(n2) RETURN n1, n2`;
+  }
+  else if(baza && type1 == 'Kriminalac' && type2 != 'Kriminalac')
+  {
+    query = `MATCH (n1:${type1}), (n2:${type2}) WHERE n1.jmbg = $from AND ID(n2) = $to CREATE (n1)-[:${edgeName}]->(n2) RETURN n1, n2`;
+  }
+  else if(baza && type1 != 'Kriminalac' && type2 != 'Kriminalac')
+  {
+    query = `MATCH (n1:${type1}), (n2:${type2}) WHERE ID(n1) = $from AND ID(n2) = $to CREATE (n1)-[:${edgeName}]->(n2) RETURN n1, n2`;
+  }
+  else if(!baza && type1 != 'Kriminalac' && type2 != 'Kriminalac')
+  {
+    query = `MATCH (n1:${type1} {id: $from}), (n2:${type2} {id: $to}) CREATE (n1)-[:${edgeName}]->(n2) RETURN n1, n2`;
+  }
+  else if(!baza && type1 == 'Kriminalac' && type2 == 'Kriminalac')
+  {
+    query = `MATCH (n1:${type1} {jmbg: $from}), (n2:${type2} {jmbg: $to}) CREATE (n1)-[:${edgeName}]->(n2) RETURN n1, n2`;
+  }
+
+  console.log("QQQQQ: ", query);
+
+  console.log("t1, from: ", type1);
+  console.log(from);
+  console.log("t2, to: ", type2);
+  console.log(to)
+
+  try {
+    
+    const result = await session.run(query, { from, to });
+
+    console.log(result.records);
+
+    if (result.records.length > 0) {
+      const node1 = result.records[0].get('n1').properties;
+      const node2 = result.records[0].get('n2').properties;
+      return res.status(200).json({ message: 'Veza uspešno dodata.', node1, node2 });
+    } else {
+      return res.status(404).json({ error: 'Čvorovi nisu pronađeni u bazi.' });
+    }
+
+  } catch (error) {
+    console.error('Greška prilikom dodavanja ivice:', error);
+    return res.status(500).json({ error: 'Greška prilikom dodavanja ivice.' });
+  }
+
 });
 
 

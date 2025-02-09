@@ -1,3 +1,6 @@
+Za Kriminalac koristiš JMBG, koji je string, dok za ostale tipove koristiš id, koji je broj.
+
+
 -poteskoce pri izradi zbog jmbg-a
 
 -CREATE komande za kreiranje baze
@@ -18,17 +21,26 @@
 
 -izmeni element imaa
 
+-BUG: kad je Baza i selektuje se Kriminalac a zatim Neki drugi tip npr Vozilo, u input
+polja su podaci Kriminalca. // RESENO
+
+-BUG: kad se klikne isti scor 2 puta za edit, kao malo ubaguje.
+//RESENO, iskljuci inspect element
+
+-kad se klikne na panel odselektuje se cvor ali u kod ostaje taj //RESENO :)
+
+-za dodavanje Edge koristimo manipulation grafa // RESENO
+
 ----------------------------------------
 
--kad se klikne na panel odselektuje se cvor ali u kod ostaje taj
+-delete edge i delete node ide na isti button
 
--BUG: kad je Baza i selektuje se Kriminalac a zatim Neki drugi tip npr Vozilo, u input
-polja su podaci Kriminalca.
+-update za veze i to je to
+
+-DOCKEEEER
 
 -BUG: kad se addNode preko panel mora da se bira tip iako si vec odabrao kad si 
-kliknuo na addNode. Odgovara samo za title = Baza
-
--za dodavanje Edge koristimo manipulation grafa
+kliknuo na addNode. Odgovara samo za title = Baza. I nije bas bug.
 
 -prikaz veza iz baze??????????
 
