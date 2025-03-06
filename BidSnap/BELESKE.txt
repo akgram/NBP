@@ -1,0 +1,18 @@
+pocetna je auction-list
+
+svako moze da vidi sta je na prodaju a ako idemo bid
+onda trazi da se ostave podaci (email)
+
+ako idemo na create onda se prijavljujemo i pravimo oglas
+
+ako se prijavi administrator ce vidimo
+
+izmena oglasa moguca samo pre pocetka licitiranja
+
+svako moze da obrise svoj oglas sa aukcije pre pocetka licitiranja
+
+licitiranje pocinje najkasnije 2min nakon stavljanja oglasa
+umedjuvremenu dok ne krene na sajt se prikazuje SOON sa sivim oglasom
+
+kad se zavrsi licitacija treba svima koji su ucestvovali da stigne obavestenje
+da je gotovo i ko je kupio proizvod

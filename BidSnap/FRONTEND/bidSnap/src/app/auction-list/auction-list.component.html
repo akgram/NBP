@@ -1,0 +1,24 @@
+<div class="container" style="background-image: url('bg1.jpg');">
+    <div class="auction-container">
+        <!-- Taskbar sa dugmetima -->
+        <div class="taskbar">
+        <button class="create-btn" (click)="createAuction()">Create Aukcija</button>
+        </div>
+    
+        <h2>Aktivne Aukcije</h2>
+    
+        <div *ngIf="loading">Učitavanje...</div>
+        <div *ngIf="error">{{ error }}</div>
+    
+        <div class="auction-list" *ngIf="!loading && !error">
+        <div *ngFor="let auction of auctions" class="auction-card" (click)="goToAuction(auction.id)">
+            <img [src]="auction.image" alt="{{ auction.title }}" />
+            <h3>{{ auction.title }}</h3>
+            <p>Cena: {{ auction.price }} RSD</p>
+            <!-- Dugme za ponudu -->
+            <button class="bid-btn" (click)="placeBid(auction.id)">Bid</button>
+        </div>
+        </div>
+  </div>
+</div>
+  

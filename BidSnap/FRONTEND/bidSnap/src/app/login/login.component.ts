@@ -23,19 +23,17 @@ export class LoginComponent {
     console.log('Username:', this.username);
     console.log('Password:', this.password);
   
-    // Pošalji zahtev backend-u
-    this.http.post('http://localhost:3000/api/login', {
-      username: this.username,
-      password: this.password,
-    }).subscribe(
-      (response: any) => {
-        console.log('Login successful:', response);
-        // Redirekcija na dashboard stranicu nakon uspešne prijave
-        this.router.navigate(['/dashboard']);
-      },
-      (error) => {
-        console.error('Login failed:', error);
-      }
-    );
-  }
+    // Poziv GET metode ka backend-u
+    this.http.get(`http://localhost:3000/api/login/${this.username}/${this.password}`)
+      .subscribe(
+        (response: any) => {
+          console.log('Login successful:', response);
+          // Redirekcija na dashboard ako je login uspešan
+          this.router.navigate(['/auction']);
+        },
+        (error) => {
+          alert('Login failed!');
+        }
+      );
+  }  
 }
