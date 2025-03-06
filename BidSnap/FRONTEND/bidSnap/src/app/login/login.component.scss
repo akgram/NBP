@@ -1,0 +1,93 @@
+@use "sass:color";
+
+$primary-color: #2ecc71; // Zelena
+$secondary-color: #1abc9c; // Svetlija zelena/tirkizna
+$input-bg: #ecf0f1; // Svetla pozadina inputa
+$btn-hover: color.adjust($primary-color, $lightness: -10%);
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.limiter {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, $primary-color, $secondary-color);
+}
+
+.container-login100 {
+  width: 400px;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.8s ease-in-out;
+}
+
+.wrap-login100 {
+  text-align: center;
+}
+
+.login100-form-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+  animation: fadeIn 1s ease-in-out;
+}
+
+.input100 {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 5px;
+  background: $input-bg;
+  color: #333;
+  font-size: 16px;
+  transition: all 0.3s ease-in-out;
+
+  &:focus {
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+    transform: scale(1.02);
+  }
+}
+
+.login100-form-btn {
+  width: 100%;
+  padding: 10px;
+  background: $primary-color;
+  border: none;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, background 0.3s;
+
+  &:hover {
+    background: $btn-hover;
+    transform: scale(1.05);
+  }
+
+  &:not(:hover) {
+    transform: scale(1);
+  }
+}
+
+.focus-input100::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: $secondary-color;
+}
