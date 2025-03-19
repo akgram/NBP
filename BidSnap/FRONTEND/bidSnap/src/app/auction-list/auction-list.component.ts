@@ -21,46 +21,20 @@ interface Auction {
   styleUrls: ['./auction-list.component.scss']
 })
 export class AuctionListComponent implements OnInit {
-  auctions: Auction[] = [
-    {
-      id: 1,
-      title: 'Laptop HP Pavilion',
-      price: 40000,
-      image: 'https://yekupi.blob.core.windows.net/ekupirs/1200Wx1200H/EK000523853_1.image',
-    },
-    {
-      id: 2,
-      title: 'Pametan telefon Samsung Galaxy S21',
-      price: 75000,
-      image: 'https://i.guim.co.uk/img/media/460229e455cd38808a11b1d0ebe866fcfd5f06ae/373_437_4638_2783/master/4638.jpg?width=1200&quality=85&auto=format&fit=max&s=8e5f2ac07c6de563bc79c746528b0cf7',
-    },
-    {
-      id: 3,
-      title: 'Gaming Monitor 27" 144Hz',
-      price: 30000,
-      image: 'https://img.gigatron.rs/img/products/large/image660bdebc57c79.jpg',
-    },
-    {
-      id: 4,
-      title: 'Mercedes E220 w211 176HP',
-      price: NaN, // Pošto cena nije broj, koristim NaN umesto stringa
-      image: 'https://cdn.xezii.com/static/photos/images/large_extend/84ccb1cbf67474ad71d6b3fbd6bf0e4109bd4134.jpg?1645457502',
-    },
-  ];
+  auctions: Auction[] = [];
 
   loading = true;
   error = '';
 
-  // Modal kontrola
   isModalOpen = false;
   email = '';
   password = '';
-  sentPassword: string = ''; // Čuvanje poslate lozinke
+  sentPassword: string = '';
   isButtonDisabled: boolean = false;
-  timer: number = 5; // Početna vrednost tajmera
-  isTimerVisible: boolean = false; // Kontrola vidljivosti tajmera
-  isAuctionFormVisible: boolean = false; // Kontrola prikaza forme za dodavanje aukcije
-  isNextButtonVisible: boolean = false; // Kontrola vidljivosti dugmeta za dalje
+  timer: number = 5;
+  isTimerVisible: boolean = false;
+  isAuctionFormVisible: boolean = false;
+  isNextButtonVisible: boolean = false;
 
   constructor(private http: HttpClient, private router: Router) {}
 
@@ -68,6 +42,21 @@ export class AuctionListComponent implements OnInit {
     setTimeout(() => {
       this.loading = false;
     }, 1000);
+
+    this.getAuctions();
+    
+  }
+
+  getAuctions() {
+    this.http.get<Auction[]>('http://localhost:3000/auctions').subscribe(
+      (data) => {
+        this.auctions = data;  // ✅ Ispravljena dodela podataka
+      },
+      (error) => {
+        console.error('Greška pri učitavanju aukcija:', error);
+        this.error = 'Došlo je do greške pri učitavanju aukcija.';
+      }
+    );
   }
 
   openModal() {
@@ -81,32 +70,26 @@ export class AuctionListComponent implements OnInit {
     this.isNextButtonVisible = false;
   }
 
-  sendPassword() {
+  async sendPassword() {
     if (!this.email) {
       alert('Unesite email!');
       return;
     }
-
-    this.isButtonDisabled = true; // Onemogući dugme
-    this.isTimerVisible = true; // Prikazivanje tajmera
-
-    this.http.post('http://localhost:3000/send-email', { email: this.email })
-      .subscribe({
-        next: (response) => {
-          console.log(response);
-          //alert('Lozinka je poslata!');
-          this.sentPassword = '123456';
-          this.startTimer(); // Pokretanje tajmera kada se uspešno pošalje email
-        },
-        error: (err) => {
-          console.error('Došlo je do greške:', err);
-          alert('Greška pri slanju emaila!');
-          this.isButtonDisabled = false; // Omogući dugme u slučaju greške
-          this.isTimerVisible = false; // Sakrij tajmer u slučaju greške
-        }
-      });
-
-    //this.closeModal(); // Zatvori modal nakon slanja
+  
+    this.isButtonDisabled = true;
+    this.isTimerVisible = true;
+  
+    try {
+      const response : any = await this.http.post<{ password: string }>('http://localhost:3000/send-email', { email: this.email }).toPromise();
+      console.log(response);
+      this.sentPassword = response.password;
+      this.startTimer();
+    } catch (err) {
+      console.error('Došlo je do greške:', err);
+      alert('Greška pri slanju emaila!');
+      this.isButtonDisabled = false;
+      this.isTimerVisible = false;
+    }
   }
 
   startTimer() {
@@ -114,24 +97,23 @@ export class AuctionListComponent implements OnInit {
       this.timer--;
       if (this.timer <= 0) {
         clearInterval(interval);
-        this.isButtonDisabled = false; // Omogući dugme nakon 5 sekundi
-        this.isTimerVisible = false; // Sakrij tajmer
-        this.timer = 5; // Resetuj timer
+        this.isButtonDisabled = false;
+        this.isTimerVisible = false;
+        this.timer = 5;
       }
-    }, 1000); // Tajmer na 1 sekundu
+    }, 1000);
   }
 
   onPasswordChange() {
-    // Provera da li unesena lozinka odgovara poslatom
     if (this.password === this.sentPassword) {
-      this.isNextButtonVisible = true; // Pokaži dugme za dalje ako se lozinka poklapa
+      this.isNextButtonVisible = true;
     } else {
-      this.isNextButtonVisible = false; // Sakrij dugme ako lozinka nije ispravna
+      this.isNextButtonVisible = false;
     }
   }
 
   openAuctionForm() {
-    this.isAuctionFormVisible = true; // Prikazivanje forme za dodavanje aukcije
+    this.isAuctionFormVisible = true;
   }
   closeAuctionForm() {
     this.isAuctionFormVisible = false;
@@ -139,8 +121,46 @@ export class AuctionListComponent implements OnInit {
   }
 
   addAuction() {
-    // Ovdje obradite logiku za dodavanje aukcije
-    alert('Aukcija je uspešno dodata!');
+    const titleInput = document.getElementById('auctionTitle') as HTMLInputElement;
+    const priceInput = document.getElementById('auctionPrice') as HTMLInputElement;
+    const imageInput = document.getElementById('auctionImage') as HTMLInputElement;
+
+    if (!titleInput.value || !priceInput.value || !imageInput.files?.length) {
+      alert('Sva polja moraju biti popunjena!');
+      return;
+    }
+
+    const file = imageInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const newAuction: Auction = {
+        id: this.auctions.length + 1,
+        title: titleInput.value,
+        price: parseFloat(priceInput.value),
+        image: reader.result as string, // Slika se konvertuje u Base64 string
+      };
+  
+      this.http.post<Auction>('http://localhost:3000/add-auction', newAuction).subscribe({
+        next: (response) => {
+          //this.auctions.push(response); // Dodaj aukciju u listu
+          this.getAuctions();
+          this.closeAuctionForm();
+          this.closeModal();
+        },
+        error: (err) => {
+          console.error('Greška pri dodavanju aukcije:', err);
+          alert('Došlo je do greške pri dodavanju aukcije!');
+        },
+      });
+    };
+  
+    reader.readAsDataURL(file);
+
+
+
+    this.closeAuctionForm();
+    this.closeModal();
   }
 
   createAuction() {

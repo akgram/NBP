@@ -16,3 +16,26 @@ umedjuvremenu dok ne krene na sajt se prikazuje SOON sa sivim oglasom
 
 kad se zavrsi licitacija treba svima koji su ucestvovali da stigne obavestenje
 da je gotovo i ko je kupio proizvod
+
+
+-----------------------------------------------------------------
+
+ne cuvamo lozinke kao hash jer ima vise posla a to nije prioritet :)
+auth se vrsi tako sto se svaki put, kad je potrebno, salje kod na mail i tako se prijavljuje...
+
+
+
+napravljeno ADD i SELECT/MATCH
+ostalo je DELETE i UPDATE
+
+
+mali problem sa velicinom slike...
+za add treba da se pamti i email ko je stavio oglas
+na osnovu toga je kasnije moguca izmena i brisanje oglasa
+
+
+kad se klikne na bid, trazi se opet verifikacija sa email i cena koju nudi
+kad se zavrsi nadmetanje iz baze se citaju sve cene koje su ponudjene i najveca
+cena pobedjuje, tj email koji je ponudio najvise.
+
+kad se zavrsi svima stize obavestenje da je gotovo i da li je kupio proizvod.
