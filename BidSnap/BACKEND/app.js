@@ -4,6 +4,8 @@ const port = 3000;
 const bodyParser = require('body-parser');  // Da bi mogao da parsiraš JSON telo zahteva
 const redis = require('redis');
 const cors = require('cors');
+const nodemailer = require('nodemailer');
+
 
 const client = redis.createClient({ url: 'redis://localhost:6379' });
 client.connect().catch(console.error);
@@ -50,6 +52,41 @@ app.get('/api/login/:username/:password', async (req, res) => {
     res.status(500).json({ message: 'Internal server error.' });
   }
 });
+
+
+const transporter = nodemailer.createTransport({  //SMTP server za slanje
+  service: 'gmail',
+  auth: {
+    user: 'akrstic497@gmail.com',
+    pass: 'ergr tfwu sweq hhei'
+  },
+  secure: true,
+});
+
+async function sendEmail(toEmail) {
+  const mailOptions = {
+    from: 'akrstic497@gmail.com',
+    to: toEmail,
+    subject: 'Resetovanje lozinke',
+    text: 'Ovo je vaša nova lozinka: 123456'
+  };
+
+    return transporter.sendMail(mailOptions);
+}
+
+app.post('/send-email', async (req, res) => {
+  console.log("alo");
+  console.log(req.body);
+  const { email } = req.body;
+  try {
+    await sendEmail(email);
+    res.status(200).json({ message: 'Email poslat!' });
+  } catch (error) {
+    res.status(500).json({ message: 'Greška pri slanju emaila' });
+  }
+});
+
+
 
 // Pokretanje servera
 app.listen(port, () => {
