@@ -98,10 +98,10 @@ async function sendEmail(toEmail) {
 
     console.log("Šaljem email sa opcijama:", mailOptions);  // Dodajemo log pred slanje emaila
     await transporter.sendMail(mailOptions);
-    console.log("✅ Email je uspešno poslat!");
+    console.log("Email je uspešno poslat!");
 
   } catch (error) {
-    console.error("❌ Greška pri slanju emaila:", error);  // Log greške ako dođe do problema
+    console.error("Greška pri slanju emaila:", error);  // Log greške ako dođe do problema
     throw error;  // Prebacujemo grešku dalje
   }
 }
@@ -117,8 +117,6 @@ app.post('/send-email', async (req, res) => {
 
   try {
     await sendEmail(email);
-
-    console.log("📌 Pre upisa u Redis");
     //const hashedPassword = await bcrypt.hash(password, 10); //  nismo preko hash jer nije bitno za ovu app a treba da se salje sa back na front pa nazad na back itd...
     //console.log(hashedPassword);
 
@@ -129,7 +127,7 @@ app.post('/send-email', async (req, res) => {
     
 
 
-    console.log(`✅ Email poslat i korisnik sačuvan: ${email}`);
+    console.log(`Email poslat i korisnik sačuvan: ${email}`);
     res.status(200).json({ password: password });
   } catch (error) {
     res.status(500).json({ message: 'Greška pri slanju emaila' });
@@ -142,13 +140,14 @@ app.get('/auctions', async (req, res) => {
   try {
     const keys = await client.keys('auction:*');
 
-    if (keys.length === 0) {
-      return res.status(404).json({ message: 'Nema aukcija u kešu' });
-    }
+    //if (keys.length === 0) {
+      //return res.status(404).json({ message: 'Nema aukcija u kešu' });  // imamo alert za obavestenje
+    //}
 
     const auctions = [];
     for (const key of keys) {
       const auction = await client.hGetAll(key);
+      auction.id = key.split(':')[1];  // trazen si pola sat
       auctions.push(auction);
     }
 
@@ -159,7 +158,7 @@ app.get('/auctions', async (req, res) => {
 });
 
 app.post('/add-auction', async (req, res) => {
-  const { id, title, price, image } = req.body;
+  const { id, title, price, image, owner } = req.body;
 
   if (!title || !price || !image) {
     return res.status(400).json({ message: 'Sva polja su obavezna!' });
@@ -169,19 +168,34 @@ app.post('/add-auction', async (req, res) => {
     id, // Generiše unikatan ID
     title,
     price,
-    image
+    image,
+    owner
   };
 
   try {
     await client.hSet(`auction:${auction.id}`, {
       title: auction.title,
       price: auction.price,
-      image: auction.image
+      image: auction.image,
+      owner: auction.owner
     });
     //await redisClient.expire(`auction:${auction.id}`, 1800); // Keš traje 30 min
     res.status(201).json({ message: 'Aukcija sačuvana!', auction });
   } catch (error) {
     res.status(500).json({ message: 'Greška pri dodavanju aukcije' });
+  }
+});
+
+
+app.delete('/auction/:id', async (req, res) => {
+  const auctionId = req.params.id;
+
+  try {
+    await client.del(`auction:${auctionId}`);
+    res.status(200).json({ message: 'Aukcija je uspešno obrisana.' });
+  } catch (error) {
+    console.error('Greška pri brisanju aukcije:', error);
+    res.status(500).json({ message: 'Došlo je do greške pri brisanju aukcije.' });
   }
 });
 

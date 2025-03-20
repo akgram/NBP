@@ -25,13 +25,14 @@ auth se vrsi tako sto se svaki put, kad je potrebno, salje kod na mail i tako se
 
 
 
-napravljeno ADD i SELECT/MATCH
-ostalo je DELETE i UPDATE
+napravljeno ADD, SELECT/MATCH i DELETE 
+ostalo je UPDATE
 
 
 mali problem sa velicinom slike...
+
 za add treba da se pamti i email ko je stavio oglas
-na osnovu toga je kasnije moguca izmena i brisanje oglasa
+na osnovu toga je kasnije moguca izmena i brisanje oglasa (RESENO)
 
 
 kad se klikne na bid, trazi se opet verifikacija sa email i cena koju nudi
@@ -39,3 +40,15 @@ kad se zavrsi nadmetanje iz baze se citaju sve cene koje su ponudjene i najveca
 cena pobedjuje, tj email koji je ponudio najvise.
 
 kad se zavrsi svima stize obavestenje da je gotovo i da li je kupio proizvod.
+
+
+
+
+
+
+vreme kad je dodat oglas!!!
+
+opis predmetaa
+
+
+dok je tajmer 5 sec ne moze da se klikne dugme tj nek bude sivo
