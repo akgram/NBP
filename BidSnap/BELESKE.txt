@@ -31,14 +31,26 @@ koristimo put ipak tkd dobro je
 ne cuvamo lozinke kao hash jer ima vise posla a to nije prioritet :)
 auth se vrsi tako sto se svaki put, kad je potrebno, salje kod na mail i tako se prijavljuje...
 
-NE RADI UPDATE SLIKE!
 mali problem sa velicinom slike...
-do 50KB potrebna je kompresija
+do 50KB potrebna je kompresija (RESENO, izlazi alert ako je preko 50KB jer je kompresija malo komplikovana a nije prioritet)
 
-kad se klikne na bid, trazi se opet verifikacija sa email i cena koju nudi
+aukcija treba da cuva pocetnu cenu ali i cenu koja ce se menjati (RESENO)
+
+onchangepassword bag, moze samo sa sifru sa prodje a da email bude bilo sta samo ne null (RESENO)
+
+kad se klikne na bid, trazi se opet verifikacija sa email i cena koju nudi (RESENO)
+
+NE RADI UPDATE SLIKE!
+
 kad se zavrsi nadmetanje iz baze se citaju sve cene koje su ponudjene i najveca
 cena pobedjuje, tj email koji je ponudio najvise.
 
 kad se zavrsi svima stize obavestenje da je gotovo i da li je kupio proizvod.
 
 dok je tajmer 5 sec ne moze da se klikne dugme tj nek bude sivo
+
+da se klikom na bid u bazu cuvaju offeri
+
+sitni bag kad se dokucava email ne menja nista??
+
+icon na tab treba crni krug iza

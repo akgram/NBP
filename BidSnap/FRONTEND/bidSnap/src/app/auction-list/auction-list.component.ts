@@ -10,10 +10,16 @@ interface Auction {
   id: number;
   title: string;
   price: number;
+  offer: number;
   image: string;
   owner: string;
   desc: string;
   createdAt: string;
+}
+
+interface Users {
+  email: string;
+  password: string;
 }
 
 @Component({
@@ -25,9 +31,16 @@ interface Auction {
 })
 export class AuctionListComponent implements OnInit {
   auctions: Auction[] = [];
+  users: Users[] = [];
 
   loading = true;
   error = '';
+
+  // cena za bid
+  startPrice: number = -1;
+  offerPrice: number = -1;
+  range: number = this.startPrice;
+  isRangeVisible: boolean = false;
 
   isModalOpen = false;
   email = '';
@@ -54,6 +67,7 @@ export class AuctionListComponent implements OnInit {
   auctionTitle: string = '';
   auctionDesc: string = '';
   auctionPrice: number = 0;
+  auctionOffer: number = 0;
   auctionImage: string = '';
   auctionTime: string = '';
   auctionIdToEdit: number | null = null;
@@ -72,6 +86,7 @@ export class AuctionListComponent implements OnInit {
     }, 1000);
 
     this.getAuctions();
+    this.getUsers();
   }
 
   getAuctions() {
@@ -83,6 +98,19 @@ export class AuctionListComponent implements OnInit {
         //console.error('Greška pri učitavanju aukcija:', error);
         //this.error = 'Došlo je do greške pri učitavanju aukcija.';
         alert("Nema aktivnih aukcija!");
+      }
+    );
+  }
+
+  getUsers() {
+    this.http.get<Users[]>('http://localhost:3000/users').subscribe(
+      (data) => {
+        this.users = data;
+      },
+      (error) => {
+        //console.error('Greška pri učitavanju aukcija:', error);
+        //this.error = 'Došlo je do greške pri učitavanju aukcija.';
+        alert("Nema ponudjivaca!");
       }
     );
   }
@@ -99,6 +127,8 @@ export class AuctionListComponent implements OnInit {
     this.isNextButtonVisible = false;
     this.isDeleteButtonVisible = false;
     this.isEditButtonVisible = false;
+
+    this.isRangeVisible = false;
   }
 
   async sendPassword() {
@@ -135,7 +165,79 @@ export class AuctionListComponent implements OnInit {
     }, 1000);
   }
 
+  onEmailChange() {
+    const user = this.users.find(u => u.email === this.email);
+    const auction = this.auctions.find(auction => auction.id === this.id);
+
+    if(user && user.password === this.password)
+    {
+      if(this.location == 'create') {
+        this.isNextButtonVisible = true;
+        this.isDeleteButtonVisible = false;
+        this.isEditButtonVisible = false;
+
+        this.isAddBtnConVisible = true;
+        this.isEditBtnConVisible = false;
+
+        this.isRangeVisible = false;
+      }
+      else if(this.location == 'delete') {
+        this.isDeleteButtonVisible = true;
+        this.isNextButtonVisible = false;
+        this.isEditButtonVisible = false;
+
+        this.isAddBtnConVisible = false;
+        this.isEditBtnConVisible = false;
+
+        this.isRangeVisible = false;
+      }
+      else if(this.location == 'edit') {
+        this.isDeleteButtonVisible = false;
+        this.isNextButtonVisible = false;
+        this.isEditButtonVisible = true;
+
+        this.isAddBtnConVisible = false;
+        this.isEditBtnConVisible = true;
+
+        this.isRangeVisible = false;
+      }
+      else if(this.location == 'bid' && user?.email !== auction?.owner) {
+        this.isDeleteButtonVisible = false;
+        this.isNextButtonVisible = false;
+        this.isEditButtonVisible = false;
+
+        this.isAddBtnConVisible = false;
+        this.isEditBtnConVisible = false;
+
+        this.isRangeVisible = true;
+      }
+      else
+      {
+        alert("Ne mozete dati ponudu za svoj predmet!");
+      }
+
+    } else {
+      this.isNextButtonVisible = false;
+      this.isDeleteButtonVisible = false;
+      this.isNextButtonVisible = false;
+      this.isEditButtonVisible = false;
+
+      this.isAddBtnConVisible = false;
+      this.isEditBtnConVisible = false;
+
+      this.isRangeVisible = false;
+    }
+
+  }
+
   onPasswordChange() {
+    const user = this.users.find(u => u.email === this.email);
+    const auction = this.auctions.find(auction => auction.id === this.id);
+
+    //console.log(this.email);
+    //console.log(user?.email);
+    //console.log(auction?.owner);
+
     if (this.email && this.password === this.sentPassword) {
 
       if(this.location == 'create') {
@@ -145,6 +247,8 @@ export class AuctionListComponent implements OnInit {
 
         this.isAddBtnConVisible = true;
         this.isEditBtnConVisible = false;
+
+        this.isRangeVisible = false;
       }
       else if(this.location == 'delete') {
         this.isDeleteButtonVisible = true;
@@ -153,6 +257,8 @@ export class AuctionListComponent implements OnInit {
 
         this.isAddBtnConVisible = false;
         this.isEditBtnConVisible = false;
+
+        this.isRangeVisible = false;
       }
       else if(this.location == 'edit') {
         this.isDeleteButtonVisible = false;
@@ -161,10 +267,34 @@ export class AuctionListComponent implements OnInit {
 
         this.isAddBtnConVisible = false;
         this.isEditBtnConVisible = true;
+
+        this.isRangeVisible = false;
+      }
+      else if(this.location == 'bid' && user?.email !== auction?.owner) {
+        this.isDeleteButtonVisible = false;
+        this.isNextButtonVisible = false;
+        this.isEditButtonVisible = false;
+
+        this.isAddBtnConVisible = false;
+        this.isEditBtnConVisible = false;
+
+        this.isRangeVisible = true;
+      }
+      else
+      {
+        alert("Ne mozete dati ponudu za svoj predmet!");
       }
 
     } else {
       this.isNextButtonVisible = false;
+      this.isDeleteButtonVisible = false;
+      this.isNextButtonVisible = false;
+      this.isEditButtonVisible = false;
+
+      this.isAddBtnConVisible = false;
+      this.isEditBtnConVisible = false;
+
+      this.isRangeVisible = false;
     }
   }
 
@@ -201,6 +331,12 @@ export class AuctionListComponent implements OnInit {
     }
 
     const file = imageInput.files[0];
+
+    if (file.size > 50 * 1024) { // 50KB = 50 * 1024 bytes
+      alert('Slika je prevelika! Maksimalna veličina slike je 50KB.');
+      return;
+    }
+
     const reader = new FileReader();
 
     const maxId: number = this.auctions.reduce((max, auction) => { return Math.max(max, Number(auction.id)); }, 0);
@@ -210,6 +346,7 @@ export class AuctionListComponent implements OnInit {
         id: maxId + 1,
         title: titleInput.value,
         price: parseFloat(priceInput.value),
+        offer: parseFloat(priceInput.value),
         image: reader.result as string,
         owner: owner.value,
         desc: desc.value,
@@ -224,6 +361,7 @@ export class AuctionListComponent implements OnInit {
           this.auctionTitle = '';
           this.auctionDesc = '';
           this.auctionPrice = 0;
+          this.auctionOffer = 0;
           this.auctionImage = '';
 
 
@@ -238,6 +376,7 @@ export class AuctionListComponent implements OnInit {
           this.auctionTitle = '';
           this.auctionDesc = '';
           this.auctionPrice = 0;
+          this.auctionOffer = 0;
           this.auctionImage = '';
 
 
@@ -288,6 +427,7 @@ export class AuctionListComponent implements OnInit {
       this.auctionTitle = auction.title;
       this.auctionDesc = auction.desc;
       this.auctionPrice = auction.price;
+      this.auctionOffer = auction.price;
       this.auctionImage = auction.image;
       this.isAuctionFormVisible = true;
     } 
@@ -303,17 +443,19 @@ export class AuctionListComponent implements OnInit {
         title: this.auctionTitle,
         desc: this.auctionDesc,
         price: this.auctionPrice,
+        offer: this.auctionOffer,
         image: this.auctionImage,  // Slika u formatu URL-a
         createdAt: new Date().toLocaleString()
       };
 
-      this.http.put(`http://localhost:3000/auctions/${this.auctionIdToEdit}`, auctionData).subscribe(response => {
+      this.http.put(`http://localhost:3000/edit/${this.auctionIdToEdit}`, auctionData).subscribe(response => {
         alert('Aukcija uspešno ažurirana!');
 
         this.auctionIdToEdit = null;
         this.auctionTitle = '';
         this.auctionDesc = '';
         this.auctionPrice = 0;
+        this.auctionOffer = 0;
         this.auctionImage = '';
 
         this.getAuctions();
@@ -323,6 +465,7 @@ export class AuctionListComponent implements OnInit {
         this.auctionTitle = '';
         this.auctionDesc = '';
         this.auctionPrice = 0;
+        this.auctionOffer = 0;
         this.auctionImage = '';
 
         console.error('Greška pri ažuriranju aukcije:', error);
@@ -334,6 +477,7 @@ export class AuctionListComponent implements OnInit {
       this.auctionTitle = '';
       this.auctionDesc = '';
       this.auctionPrice = 0;
+      this.auctionOffer = 0;
       this.auctionImage = '';
 
 
@@ -358,13 +502,46 @@ export class AuctionListComponent implements OnInit {
     this.openModal();
   }
 
+  bidAuctionForm() {
+    this.location = "bid";
+    this.openModal();
+  }
 
-  placeBid(auctionId: number) {
-    console.log(`Postavljanje ponude za aukciju ID: ${auctionId}`);
+  updateValue(event: Event) {
+    // Možeš dodati dodatnu logiku za promene, ako je potrebno
+    //console.log((<HTMLInputElement>event.target).value);
+  }
+
+  placeOffer() {
+    console.log(this.range);
+    this.offerPrice = this.range;
+
+    const auctionData = {
+      offer: this.offerPrice,
+    };
+
+    this.http.put(`http://localhost:3000/offer/${this.id}`, auctionData).subscribe(response => {
+      alert('Ponuda uspešno ažurirana!');
+
+      this.getAuctions();
+    }, error => {
+      console.error('Greška pri ažuriranju ponude:', error);
+    });
+
+    this.closeModal();
   }
 
   goToAuction(auctionId: number): void {
     console.log('Id aukcije:', auctionId);
     this.id = auctionId;
+
+    const auction = this.auctions.find(auction => auction.id === this.id);
+
+    if(auction)
+    {
+      this.startPrice = auction.price;
+      this.offerPrice = parseFloat(this.startPrice.toString()) * 0.1 + parseFloat(auction.offer.toString());
+      this.range = this.offerPrice;
+    }
   }
 }

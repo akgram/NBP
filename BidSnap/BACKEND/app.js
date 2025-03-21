@@ -157,8 +157,27 @@ app.get('/auctions', async (req, res) => {
   }
 });
 
+app.get('/users', async (req, res) => {
+  try {
+    const keys = await client.keys('user:*');
+
+    const users = [];
+    for (const key of keys) {
+      const user = await client.hGetAll(key);
+      user.id = key.split(':')[1];  // trazen si pola sat
+      users.push(user);
+    }
+
+    console.log(users);
+
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Greška pri povlačenju user-a' });
+  }
+});
+
 app.post('/add-auction', async (req, res) => {
-  const { id, title, price, image, owner, desc, createdAt } = req.body;
+  const { id, title, price, offer, image, owner, desc, createdAt } = req.body;
 
   if (!title || !price || !image) {
     return res.status(400).json({ message: 'Sva polja su obavezna!' });
@@ -168,6 +187,7 @@ app.post('/add-auction', async (req, res) => {
     id,
     title,
     price,
+    offer,
     image,
     owner,
     desc,
@@ -178,12 +198,13 @@ app.post('/add-auction', async (req, res) => {
     await client.hSet(`auction:${auction.id}`, {
       title: auction.title,
       price: auction.price,
+      offer: auction.offer,
       image: auction.image,
       owner: auction.owner,
       desc: auction.desc,
       createdAt: auction.createdAt
     });
-    //await redisClient.expire(`auction:${auction.id}`, 1800); // Keš traje 30 min
+    //await redisClient.expire(`auction:${auction.id}`, 1800); // kes traje 30 min
     res.status(201).json({ message: 'Aukcija sačuvana!', auction });
   } catch (error) {
     res.status(500).json({ message: 'Greška pri dodavanju aukcije' });
@@ -204,7 +225,7 @@ app.delete('/auction/:id', async (req, res) => {
 });
 
 
-app.put('/auctions/:id', async (req, res) => {
+app.put('/edit/:id', async (req, res) => {
   const auctionId = req.params.id;
   const updatedAuctionData = req.body;
 
@@ -218,8 +239,30 @@ app.put('/auctions/:id', async (req, res) => {
       title: updatedAuctionData.title,
       desc: updatedAuctionData.desc,
       price: parseInt(updatedAuctionData.price),
+      offer: parseInt(updatedAuctionData.price),
       image: updatedAuctionData.image,
       createdAt: updatedAuctionData.createdAt
+    });
+
+    res.status(200).json({ message: 'Aukcija uspešno ažurirana', auction: updatedAuctionData });
+  } catch (err) {
+    console.error('Greška pri ažuriranju aukcije:', err);
+    res.status(500).json({ message: 'Greška pri ažuriranju aukcije', error: err });
+  }
+});
+
+app.put('/offer/:id', async (req, res) => {
+  const auctionId = req.params.id;
+  const updatedAuctionData = req.body;
+
+  console.log(auctionId);
+  console.log(updatedAuctionData);
+  console.log(parseInt(updatedAuctionData.offer));
+
+  try {
+
+    await client.hSet(`auction:${auctionId}`, {
+      offer: parseInt(updatedAuctionData.offer),
     });
 
     res.status(200).json({ message: 'Aukcija uspešno ažurirana', auction: updatedAuctionData });
