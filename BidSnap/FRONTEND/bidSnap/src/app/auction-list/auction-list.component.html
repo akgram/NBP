@@ -10,10 +10,16 @@
         <div *ngIf="error">{{ error }}</div>
 
         <div class="auction-list" *ngIf="!loading && !error">
-            <div *ngFor="let auction of auctions" class="auction-card" (click)="goToAuction(auction.id)">
-                <img [src]="auction.image" alt="{{ auction.title }}" />
+            <div *ngFor="let auction of auctions" class="auction-card" (click)="goToAuction(auction.id)" (mouseover)="hoveredAuction = auction.id" (mouseleave)="hoveredAuction = null">
+                <div class="image-container">
+                  <img [src]="auction.image" alt="{{ auction.title }}" class="auction-image" [class.blurred]="hoveredAuction === auction.id" />
+                  <div class="auction-desc-overlay" *ngIf="hoveredAuction === auction.id">
+                      <p>{{ auction.desc }}</p>
+                  </div>
+                </div>
                 <h3>{{ auction.title }}</h3>
-                <p>Cena: {{ auction.price }} RSD</p>
+                <p class="price">Cena: {{ auction.price }} EUR</p>
+
                 <button class="delete-btn" (click)="deleteAuctionForm()"><svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#e3e3e3"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg></button>
                 <button class="edit-btn" (click)="editAuctionForm()"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h357l-80 80H200v560h560v-278l80-80v358q0 33-23.5 56.5T760-120H200Zm280-360ZM360-360v-170l367-367q12-12 27-18t30-6q16 0 30.5 6t26.5 18l56 57q11 12 17 26.5t6 29.5q0 15-5.5 29.5T897-728L530-360H360Zm481-424-56-56 56 56ZM440-440h56l232-232-28-28-29-28-231 231v57Zm260-260-29-28 29 28 28 28-28-28Z"/></svg></button>
                 <button class="bid-btn" (click)="placeBid(auction.id)">Bid</button>
@@ -26,7 +32,7 @@
 <div class="modal" *ngIf="isModalOpen">
     <button class="close-btn" (click)="closeModal()"><svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#e3e3e3"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></button>
     <div class="modal-content">
-      <h2>Kreiraj Aukciju</h2>
+      <h2>Verification!</h2>
       <label>Email:</label>
       <input type="email" [(ngModel)]="email" id="emailOwner" placeholder="Unesite email">
   
@@ -40,10 +46,13 @@
         <p>Tajmer: {{ timer }} sekundi</p>
       </div>
       <div *ngIf="isNextButtonVisible" class="next-btn-container">
-        <button class="next-btn" (click)="openAuctionForm()">Dalje</button>
+        <button class="next-btn" (click)="openAuctionForm()">Next</button>
       </div>
       <div *ngIf="isDeleteButtonVisible" class="delete-btn-container">
         <button class="delete-btn" (click)="deleteAuction()">Delete</button>
+      </div>
+      <div *ngIf="isEditButtonVisible" class="edit-btn-container">
+        <button class="edit-btn" (click)="editAuction()">Edit</button>
       </div>
     </div>
   </div>
@@ -55,15 +64,34 @@
     <!-- Dugme za zatvaranje forme -->
     <button class="close-btn" (click)="closeAuctionForm()"><svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#e3e3e3"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></button>
 
-    <h2>Dodaj Aukciju</h2>
-    <label for="auctionTitle">Naziv aukcije:</label>
-    <input type="text" id="auctionTitle" placeholder="Unesite naziv aukcije" />
+
+    <div *ngIf="Label1Visible">
+      <h2>Add Auction</h2>
+    </div>
+    <div *ngIf="Label2Visible">
+      <h2>Edit Auction</h2>
+    </div>
+    
+    <label for="auctionTitle">Naziv predmeta:</label>
+    <input type="text" id="auctionTitle" [(ngModel)]="auctionTitle" name="auctionTitle" placeholder="Unesite naziv predmeta" />
+    
+    <label for="auctionDescription">Opis predmeta:</label>
+    <input type="text" id="auctionDescription" [(ngModel)]="auctionDesc" name="auctionDescription" placeholder="Unesite opis" />
+      
+    <label for="auctionPrice">Cena predmeta:</label>
+    <input type="number" id="auctionPrice" [(ngModel)]="auctionPrice" name="auctionPrice" placeholder="Unesite cenu" />
+    
+    <!-- Slika (ako je potrebna) -->
+    <label for="auctionImage">Slika predmeta:</label>
+    <input type="file" id="auctionImage"  />
   
-    <label for="auctionPrice">Cena aukcije:</label>
-    <input type="number" id="auctionPrice" placeholder="Unesite cenu" />
-  
-    <label for="auctionImage">Slika aukcije:</label>
-    <input type="file" id="auctionImage" />
-  
-    <button class="add-btn" (click)="addAuction()">Dodaj aukciju</button>
+    <!--<button class="add-btn" (click)="addAuction()">Dodaj aukciju</button>               (change)="onFileChange($event)"-->
+
+    <div *ngIf="isAddBtnConVisible">
+      <button class="add-btn" (click)="addAuction()">Add Auction</button>
+    </div>
+
+    <div *ngIf="isEditBtnConVisible">
+      <button class="add-btn" (click)="saveAuction()">Edit Auction</button>
+    </div>
   </div>

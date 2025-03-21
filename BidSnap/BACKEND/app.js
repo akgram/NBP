@@ -107,7 +107,7 @@ async function sendEmail(toEmail) {
 }
 
 app.post('/send-email', async (req, res) => {
-  console.log("alo");
+  //console.log("alo");
   console.log(req.body);
   const { email } = req.body;
 
@@ -158,18 +158,20 @@ app.get('/auctions', async (req, res) => {
 });
 
 app.post('/add-auction', async (req, res) => {
-  const { id, title, price, image, owner } = req.body;
+  const { id, title, price, image, owner, desc, createdAt } = req.body;
 
   if (!title || !price || !image) {
     return res.status(400).json({ message: 'Sva polja su obavezna!' });
   }
 
   const auction = {
-    id, // Generiše unikatan ID
+    id,
     title,
     price,
     image,
-    owner
+    owner,
+    desc,
+    createdAt
   };
 
   try {
@@ -177,7 +179,9 @@ app.post('/add-auction', async (req, res) => {
       title: auction.title,
       price: auction.price,
       image: auction.image,
-      owner: auction.owner
+      owner: auction.owner,
+      desc: auction.desc,
+      createdAt: auction.createdAt
     });
     //await redisClient.expire(`auction:${auction.id}`, 1800); // Keš traje 30 min
     res.status(201).json({ message: 'Aukcija sačuvana!', auction });
@@ -198,6 +202,33 @@ app.delete('/auction/:id', async (req, res) => {
     res.status(500).json({ message: 'Došlo je do greške pri brisanju aukcije.' });
   }
 });
+
+
+app.put('/auctions/:id', async (req, res) => {
+  const auctionId = req.params.id;
+  const updatedAuctionData = req.body;
+
+  //console.log(auctionId);
+  //console.log(updatedAuctionData);
+  //console.log(parseInt(updatedAuctionData.price));
+
+  try {
+
+    await client.hSet(`auction:${auctionId}`, {
+      title: updatedAuctionData.title,
+      desc: updatedAuctionData.desc,
+      price: parseInt(updatedAuctionData.price),
+      image: updatedAuctionData.image,
+      createdAt: updatedAuctionData.createdAt
+    });
+
+    res.status(200).json({ message: 'Aukcija uspešno ažurirana', auction: updatedAuctionData });
+  } catch (err) {
+    console.error('Greška pri ažuriranju aukcije:', err);
+    res.status(500).json({ message: 'Greška pri ažuriranju aukcije', error: err });
+  }
+});
+
 
 
 // Pokretanje servera

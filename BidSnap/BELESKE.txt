@@ -19,36 +19,26 @@ da je gotovo i ko je kupio proizvod
 
 
 -----------------------------------------------------------------
+za add treba da se pamti i email ko je stavio oglas
+na osnovu toga je kasnije moguca izmena i brisanje oglasa (RESENO)
+
+vreme kad je dodat oglas!!!
+opis predmetaa (RESENO)
+
+napravljeno ADD, SELECT/MATCH, DELETE i UPDATE (RESENO)
+koristimo put ipak tkd dobro je
 
 ne cuvamo lozinke kao hash jer ima vise posla a to nije prioritet :)
 auth se vrsi tako sto se svaki put, kad je potrebno, salje kod na mail i tako se prijavljuje...
 
-
-
-napravljeno ADD, SELECT/MATCH i DELETE 
-ostalo je UPDATE
-
-
+NE RADI UPDATE SLIKE!
 mali problem sa velicinom slike...
-
-za add treba da se pamti i email ko je stavio oglas
-na osnovu toga je kasnije moguca izmena i brisanje oglasa (RESENO)
-
+do 50KB potrebna je kompresija
 
 kad se klikne na bid, trazi se opet verifikacija sa email i cena koju nudi
 kad se zavrsi nadmetanje iz baze se citaju sve cene koje su ponudjene i najveca
 cena pobedjuje, tj email koji je ponudio najvise.
 
 kad se zavrsi svima stize obavestenje da je gotovo i da li je kupio proizvod.
-
-
-
-
-
-
-vreme kad je dodat oglas!!!
-
-opis predmetaa
-
 
 dok je tajmer 5 sec ne moze da se klikne dugme tj nek bude sivo
