@@ -47,9 +47,8 @@
           id="range"
           [(ngModel)]="range"
           [min]="offerPrice"
-          [max]="startPrice * 5"
+          [max]="startPrice * 100"
           [step]="startPrice * 0.1"
-          (input)="updateValue($event)"
         />
 
         <button class="next-btn" (click)="placeOffer()">Bid</button>

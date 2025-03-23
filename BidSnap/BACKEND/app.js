@@ -176,6 +176,28 @@ app.get('/users', async (req, res) => {
   }
 });
 
+app.get('/offers', async (req, res) => {
+  try {
+    const keys = await client.keys('offer:*');
+
+    let allOffers = [];
+    for (let key of keys) {
+        const offers = await client.zRangeWithScores(key, 0, -1);
+        const offersWithId = offers.map(offer => ({
+          ...offer,
+          id_auction: parseInt(key.split(':')[1])  // id aukcije za koju je offer
+        }));
+        allOffers = allOffers.concat(offersWithId);
+    }
+
+    console.log(allOffers);
+
+    res.status(200).json(allOffers);
+  } catch (error) {
+    res.status(500).json({ message: 'Greška pri povlačenju user-a' });
+  }
+});
+
 app.post('/add-auction', async (req, res) => {
   const { id, title, price, offer, image, owner, desc, createdAt } = req.body;
 
@@ -255,14 +277,20 @@ app.put('/offer/:id', async (req, res) => {
   const auctionId = req.params.id;
   const updatedAuctionData = req.body;
 
-  console.log(auctionId);
-  console.log(updatedAuctionData);
-  console.log(parseInt(updatedAuctionData.offer));
+  // console.log(auctionId);
+  // console.log(updatedAuctionData);
+  // console.log(parseInt(updatedAuctionData.offer));
+  // console.log(updatedAuctionData.bidder);
+  // console.log(updatedAuctionData.count);
 
   try {
 
     await client.hSet(`auction:${auctionId}`, {
       offer: parseInt(updatedAuctionData.offer),
+    });
+
+    await client.zAdd(`offer:${auctionId}`, {
+      score: parseInt(updatedAuctionData.offer), value: updatedAuctionData.bidder + ' [' + `${updatedAuctionData.count}` + ']'
     });
 
     res.status(200).json({ message: 'Aukcija uspešno ažurirana', auction: updatedAuctionData });

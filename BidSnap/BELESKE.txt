@@ -11,9 +11,6 @@ izmena oglasa moguca samo pre pocetka licitiranja
 
 svako moze da obrise svoj oglas sa aukcije pre pocetka licitiranja
 
-licitiranje pocinje najkasnije 2min nakon stavljanja oglasa
-umedjuvremenu dok ne krene na sajt se prikazuje SOON sa sivim oglasom
-
 kad se zavrsi licitacija treba svima koji su ucestvovali da stigne obavestenje
 da je gotovo i ko je kupio proizvod
 
@@ -40,17 +37,37 @@ onchangepassword bag, moze samo sa sifru sa prodje a da email bude bilo sta samo
 
 kad se klikne na bid, trazi se opet verifikacija sa email i cena koju nudi (RESENO)
 
+icon na tab treba crni krug iza (RESENO)
+
+da se klikom na bid u bazu cuvaju offeri (RESENO)
+-----------------------------------------------------------------
+NEKA OBAVESTENJA:
+
+nismo koristili expire :)
+
+koristili smo sorted sets za offere
+
+za sorted sets imamo email(id da bi mogli duplikati, tesko :) )
+
+ioredis biblioteka hset, zadd...
+redis biblioteka hSet, zAdd...
+------------------------------------------------------------------
 NE RADI UPDATE SLIKE!
 
 kad se zavrsi nadmetanje iz baze se citaju sve cene koje su ponudjene i najveca
 cena pobedjuje, tj email koji je ponudio najvise.
 
-kad se zavrsi svima stize obavestenje da je gotovo i da li je kupio proizvod.
+licitiranje pocinje najkasnije 2min nakon stavljanja oglasa
+umedjuvremenu dok ne krene na sajt se prikazuje SOON sa sivim oglasom
+
+kad je offer stavljen nek traje aukcija 7dana (2-3min za test)
+
+kad se zavrsi svima stize obavestenje da je gotovo i da li je kupio proizvod. pubsub
 
 dok je tajmer 5 sec ne moze da se klikne dugme tj nek bude sivo
 
-da se klikom na bid u bazu cuvaju offeri
-
 sitni bag kad se dokucava email ne menja nista??
 
-icon na tab treba crni krug iza
+update range prikaz?
+
+skini max value na range jer aukcija brt??

@@ -22,6 +22,12 @@ interface Users {
   password: string;
 }
 
+interface Offers {
+  email: string;
+  offer: number;
+  id_auction: number;
+}
+
 @Component({
   selector: 'app-auction-list',
   standalone: true,
@@ -32,6 +38,7 @@ interface Users {
 export class AuctionListComponent implements OnInit {
   auctions: Auction[] = [];
   users: Users[] = [];
+  offers: Offers[] = [];
 
   loading = true;
   error = '';
@@ -87,6 +94,7 @@ export class AuctionListComponent implements OnInit {
 
     this.getAuctions();
     this.getUsers();
+    this.getOffers();
   }
 
   getAuctions() {
@@ -111,6 +119,19 @@ export class AuctionListComponent implements OnInit {
         //console.error('Greška pri učitavanju aukcija:', error);
         //this.error = 'Došlo je do greške pri učitavanju aukcija.';
         alert("Nema ponudjivaca!");
+      }
+    );
+  }
+
+  getOffers() {
+    this.http.get<Offers[]>('http://localhost:3000/offers').subscribe(
+      (data) => {
+        this.offers = data;
+      },
+      (error) => {
+        //console.error('Greška pri učitavanju aukcija:', error);
+        //this.error = 'Došlo je do greške pri učitavanju aukcija.';
+        alert("Nema ponuda!");
       }
     );
   }
@@ -332,7 +353,7 @@ export class AuctionListComponent implements OnInit {
 
     const file = imageInput.files[0];
 
-    if (file.size > 50 * 1024) { // 50KB = 50 * 1024 bytes
+    if (file.size > 60 * 1024) { // 50KB = 50 * 1024 bytes
       alert('Slika je prevelika! Maksimalna veličina slike je 50KB.');
       return;
     }
@@ -366,6 +387,8 @@ export class AuctionListComponent implements OnInit {
 
 
           this.getAuctions();
+          this.getUsers();
+          this.getOffers();
           this.closeAuctionForm();
           this.closeModal();
         },
@@ -459,6 +482,8 @@ export class AuctionListComponent implements OnInit {
         this.auctionImage = '';
 
         this.getAuctions();
+        this.getUsers();
+        this.getOffers();
       }, error => {
 
         this.auctionIdToEdit = null;
@@ -507,24 +532,39 @@ export class AuctionListComponent implements OnInit {
     this.openModal();
   }
 
-  updateValue(event: Event) {
-    // Možeš dodati dodatnu logiku za promene, ako je potrebno
-    //console.log((<HTMLInputElement>event.target).value);
-  }
-
   placeOffer() {
     console.log(this.range);
+
+
+    // PUB SUB za notify
+
+    if(this.range === this.startPrice * 100)
+    {
+      alert("Čestitamo!\nKupili ste ovaj predmet po najvišoj ceni.")
+
+      // DAJ BACK-U DOZNANJA DA JE KUPLJEN PROIZVOD ili samo zovi delete za tu aukciju
+    }
+
+    let old = this.offerPrice;
     this.offerPrice = this.range;
+
+    const of = this.offers.filter(off => off.id_auction === parseInt(this.id.toString()));
+
 
     const auctionData = {
       offer: this.offerPrice,
+      bidder: this.email,
+      count: of.length,
     };
 
     this.http.put(`http://localhost:3000/offer/${this.id}`, auctionData).subscribe(response => {
       alert('Ponuda uspešno ažurirana!');
 
       this.getAuctions();
+      this.getUsers();
+      this.getOffers();
     }, error => {
+      this.range = old;
       console.error('Greška pri ažuriranju ponude:', error);
     });
 
