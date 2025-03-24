@@ -6,6 +6,9 @@ const redis = require('redis');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcrypt');
+const e = require('express');
+
+let bidNotify;
 
 
 const client = redis.createClient({ url: 'redis://localhost:6379' });
@@ -83,22 +86,92 @@ const transporter = nodemailer.createTransport({  //SMTP server za slanje
   secure: true,
 });
 
-async function sendEmail(toEmail) {
+async function sendEmail(toEmail, arrEmails, tmp, bidder) {
   try {
-    password = "";
-    password = createPassword();  // Pozivamo createPassword da generiše lozinku
-    console.log("Generisana lozinka:", password);  // Dodajemo log
 
-    const mailOptions = {
-      from: 'akrstic497@gmail.com',
-      to: toEmail,
-      subject: 'Resetovanje lozinke',
-      text: `Ovo je vaša nova lozinka: ${password}`,
-    };
+    if(arrEmails === null && typeof toEmail !== 'number')
+    {
+      password = "";
+      password = createPassword();  // Pozivamo createPassword da generiše lozinku
+      console.log("Generisana lozinka:", password);  // Dodajemo log
 
-    console.log("Šaljem email sa opcijama:", mailOptions);  // Dodajemo log pred slanje emaila
-    await transporter.sendMail(mailOptions);
-    console.log("Email je uspešno poslat!");
+      const mailOptions = {
+        from: 'akrstic497@gmail.com',
+        to: toEmail,
+        subject: 'Resetovanje lozinke',
+        text: `Ovo je vaša nova lozinka: ${password}`,
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log("Email je uspešno poslat!");
+    }
+    else
+    {
+      let title = null;
+      let offer = null;
+
+      const keys = await client.keys('auction:*');
+
+      const auctions = [];
+      for (const key of keys) {
+        const auction = await client.hGetAll(key);
+        auction.id = key.split(':')[1];  // trazen si pola sat
+        auctions.push(auction);
+      }
+
+      for(let i = 0; i < auctions.length; i++)
+      {
+        if(parseInt(auctions[i].id) === parseInt(toEmail))
+        {
+          const own = auctions[i].owner;
+          title = auctions[i].title;
+          offer = auctions[i].offer;
+
+          const mailOptions = {
+            from: 'akrstic497@gmail.com',
+            to: own,
+            subject: 'BidSnap Obaveštava!',
+            text: `Poštovani,\nZa Vaš oglas: ${auctions[i].title} je upravo izneta ponuda: ${auctions[i].offer}EUR!.\nVaš BidSnap!`,
+            };
+
+          await transporter.sendMail(mailOptions);
+          console.log("Email je uspešno poslat vlasniku!");
+        }    
+      }
+
+        const mailOptionsBidder = {
+          from: 'akrstic497@gmail.com',
+          to: bidder,
+          subject: 'BidSnap Obaveštava!',
+          text: `Poštovani,\nUpravo ste licitirali za: ${title}, Vaša ponuda je: ${offer}EUR.\nSrećno, Vaš BidSnap!`,
+        };
+        // prvo saljemo mail bidderu
+        if (arrEmails.length === 1 || tmp === 1) {
+          await transporter.sendMail(mailOptionsBidder);
+        }
+        
+        const mailOptionsOthers = {
+          from: 'akrstic497@gmail.com',
+          to: '',
+          subject: 'BidSnap Obaveštava!',
+          text: `Poštovani,\nNa oglas za koji ste licitirali: ${title}, izneta je nova ponuda: ${offer}EUR.\nVaš BidSnap!`,
+        };
+        
+        // onda saljemo ostalim ucesnicima
+        if (arrEmails.length > 1) {
+          for (let i = 0; i < arrEmails?.length; i++) {
+            if (i === 0) {
+              mailOptionsOthers.to = arrEmails[i];
+            } else {
+              mailOptionsOthers.to += ', ' + arrEmails[i];
+            }
+          }
+          await transporter.sendMail(mailOptionsOthers);
+          console.log("Email je uspešno poslat!");
+        }
+
+
+      }
 
   } catch (error) {
     console.error("Greška pri slanju emaila:", error);  // Log greške ako dođe do problema
@@ -106,9 +179,48 @@ async function sendEmail(toEmail) {
   }
 }
 
+app.post('/send-notify', async (req, res) => {
+  //console.log(req.body);
+  const { id_auction, bidder } = req.body;
+  //console.log("send-notify");
+  //console.log(parseInt(id_auction));
+  //console.log(bidder);
+
+  try {
+
+    if(await client.exists(`offer:${parseInt(id_auction)}`))
+    {
+      const bidders = await client.zRange(`offer:${parseInt(id_auction)}`, 0, -1);
+
+      const emails = [...new Set(bidders.map(bidder => bidder.split(' ')[0]))]; // izbacuje [broj] jer ih povlacimo iz offer-a kako ne bi stiglo svima obavestenje koje ne treba
+      // set nema duplikate
+      
+      const arrEmails = Array.from(emails);
+
+      let tmp = 0;
+      if (arrEmails.includes(bidder)) {
+        tmp = 1;
+      }
+      //console.log("send-notify2");
+      //console.log(id_auction);
+      //console.log(arrEmails);
+      await sendEmail(parseInt(id_auction), arrEmails, tmp, bidder);
+      
+      console.log("Obavesteni su ucesnici!");
+      res.status(200).json({ message: 'Obavesteni!' });
+    }
+    else
+    {
+      res.status(200).json({ message: 'Prva ponuda!' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Greška pri slanju emaila' });
+  }
+});
+
 app.post('/send-email', async (req, res) => {
   //console.log("alo");
-  console.log(req.body);
+  //console.log(req.body);
   const { email } = req.body;
 
   if (!email) {
@@ -116,23 +228,22 @@ app.post('/send-email', async (req, res) => {
   }
 
   try {
-    await sendEmail(email);
+    await sendEmail(email, null, 0, null);
     //const hashedPassword = await bcrypt.hash(password, 10); //  nismo preko hash jer nije bitno za ovu app a treba da se salje sa back na front pa nazad na back itd...
-    //console.log(hashedPassword);
+    //console.log(hashedPassword);  // ali nije ni bitan jer se svakim zatvaranjem modal-a resetuje
 
     await client.hSet(`user:${email}`, {
       email: email,
       password: password, //hashedPassword
     });
     
-
-
     console.log(`Email poslat i korisnik sačuvan: ${email}`);
     res.status(200).json({ password: password });
   } catch (error) {
     res.status(500).json({ message: 'Greška pri slanju emaila' });
   }
 });
+
 
 
 
@@ -226,7 +337,8 @@ app.post('/add-auction', async (req, res) => {
       desc: auction.desc,
       createdAt: auction.createdAt
     });
-    //await redisClient.expire(`auction:${auction.id}`, 1800); // kes traje 30 min
+    await client.expire(`auction:${auction.id}`, 20); // kes podatak, u sekundama (trebalo bi 7 dana ali radimo sa 20sec zbog testa)
+                                                      // imamo 2 oglasa koji nemaju Time To Live radi testiranja app
     res.status(201).json({ message: 'Aukcija sačuvana!', auction });
   } catch (error) {
     res.status(500).json({ message: 'Greška pri dodavanju aukcije' });

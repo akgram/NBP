@@ -535,9 +535,6 @@ export class AuctionListComponent implements OnInit {
   placeOffer() {
     console.log(this.range);
 
-
-    // PUB SUB za notify
-
     if(this.range === this.startPrice * 100)
     {
       alert("Čestitamo!\nKupili ste ovaj predmet po najvišoj ceni.")
@@ -560,6 +557,8 @@ export class AuctionListComponent implements OnInit {
     this.http.put(`http://localhost:3000/offer/${this.id}`, auctionData).subscribe(response => {
       alert('Ponuda uspešno ažurirana!');
 
+      this.sendNotify(auctionData.bidder);
+
       this.getAuctions();
       this.getUsers();
       this.getOffers();
@@ -569,6 +568,16 @@ export class AuctionListComponent implements OnInit {
     });
 
     this.closeModal();
+  }
+
+  async sendNotify(bidder: any) {
+    try {
+      const response : any = await this.http.post('http://localhost:3000/send-notify', { id_auction: this.id, bidder: bidder }).toPromise();
+      console.log(response);
+    } catch (err) {
+      console.error('Došlo je do greške:', err);
+      alert('Greška pri slanju emaila-notify!');
+    }
   }
 
   goToAuction(auctionId: number): void {
