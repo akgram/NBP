@@ -8,24 +8,18 @@ const nodemailer = require('nodemailer');
 const bcrypt = require('bcrypt');
 const e = require('express');
 
-let bidNotify;
 
 
 const client = redis.createClient({ url: 'redis://localhost:6379' });
 client.connect().catch(console.error);
 
-client.on('connect', () => {
-    console.log('Connected to Redis');
-  });
+client.on('connect', () => { console.log('Connected to Redis'); });
   
-  client.on('error', (err) => {
-    console.log('Error connecting to Redis:', err);
-  });
+client.on('error', (err) => { console.log('Error connecting to Redis:', err); });
 
-// Middleware za parsiranje JSON-a
+  // Middleware za parsiranje JSON-a
 app.use(bodyParser.json());
 app.use(cors({ origin: 'http://localhost:4200' })); // za front
-
 
 
 // Ruta za login
@@ -131,7 +125,7 @@ async function sendEmail(toEmail, arrEmails, tmp, bidder) {
             from: 'akrstic497@gmail.com',
             to: own,
             subject: 'BidSnap Obaveštava!',
-            text: `Poštovani,\nZa Vaš oglas: ${auctions[i].title} je upravo izneta ponuda: ${auctions[i].offer}EUR!.\nVaš BidSnap!`,
+            text: `Poštovani,\nZa Vaš oglas: "${auctions[i].title}" je upravo izneta ponuda: ${auctions[i].offer}EUR!.\nVaš BidSnap!`,
             };
 
           await transporter.sendMail(mailOptions);
@@ -143,7 +137,7 @@ async function sendEmail(toEmail, arrEmails, tmp, bidder) {
           from: 'akrstic497@gmail.com',
           to: bidder,
           subject: 'BidSnap Obaveštava!',
-          text: `Poštovani,\nUpravo ste licitirali za: ${title}, Vaša ponuda je: ${offer}EUR.\nSrećno, Vaš BidSnap!`,
+          text: `Poštovani,\nUpravo ste licitirali za: "${title}", Vaša ponuda je: ${offer}EUR.\nSrećno, Vaš BidSnap!`,
         };
         // prvo saljemo mail bidderu
         if (arrEmails.length === 1 || tmp === 1) {
@@ -154,12 +148,19 @@ async function sendEmail(toEmail, arrEmails, tmp, bidder) {
           from: 'akrstic497@gmail.com',
           to: '',
           subject: 'BidSnap Obaveštava!',
-          text: `Poštovani,\nNa oglas za koji ste licitirali: ${title}, izneta je nova ponuda: ${offer}EUR.\nVaš BidSnap!`,
+          text: `Poštovani,\nNa oglas za koji ste licitirali: "${title}", izneta je nova ponuda: ${offer}EUR.\nVaš BidSnap!`,
         };
         
         // onda saljemo ostalim ucesnicima
         if (arrEmails.length > 1) {
           for (let i = 0; i < arrEmails?.length; i++) {
+            if(bidder === arrEmails[i])
+            {
+              //console.log(bidder);
+              //console.log(arrEmails[i]);
+              continue;
+
+            }
             if (i === 0) {
               mailOptionsOthers.to = arrEmails[i];
             } else {
@@ -337,8 +338,9 @@ app.post('/add-auction', async (req, res) => {
       desc: auction.desc,
       createdAt: auction.createdAt
     });
-    await client.expire(`auction:${auction.id}`, 20); // kes podatak, u sekundama (trebalo bi 7 dana ali radimo sa 20sec zbog testa)
+    await client.expire(`auction:${auction.id}`, 70); // kes podatak, u sekundama (trebalo bi 7 dana ali radimo sa 20sec zbog testa)
                                                       // imamo 2 oglasa koji nemaju Time To Live radi testiranja app
+    await client.sAdd(`all_auctions:${auction.id}`, `${auction.id}`); // potrebno za detekciju isticanja aukcije
     res.status(201).json({ message: 'Aukcija sačuvana!', auction });
   } catch (error) {
     res.status(500).json({ message: 'Greška pri dodavanju aukcije' });
@@ -412,9 +414,120 @@ app.put('/offer/:id', async (req, res) => {
   }
 });
 
+async function sendExpire(owner, winnerEmail, otherBidders, offerPrice, title) {
+  const mailOptionsOwner = {
+    from: 'akrstic497@gmail.com',
+    to: owner,
+    subject: 'BidSnap Obaveštava!',
+    text: `Poštovani,\nZavršeno je javno nadmetanje za Vaš predmet: "${title}", konacna cena je: ${offerPrice}EUR.\nVaš BidSnap!`,
+  };
+  // prvo saljemo mail owneru
+  if (owner.length > 0) {
+    await transporter.sendMail(mailOptionsOwner);
+  }
+
+  //////////////////////////////////////
+  const mailOptionsWinner = {
+    from: 'akrstic497@gmail.com',
+    to: winnerEmail,
+    subject: 'BidSnap Obaveštava!',
+    text: `Poštovani,\nČestitamo, upravo ste pobedili na javnom nadmetanju za predmet: "${title}", Vaša ponuda je: ${offerPrice}EUR.\nVaš BidSnap!`,
+  };
+
+  // saljemo winneru
+  if (winnerEmail.length > 0) {
+    await transporter.sendMail(mailOptionsWinner);
+  }
+
+  //////////////////////////////////////
+
+  const mailOptionsBidders = {
+    from: 'akrstic497@gmail.com',
+    to: otherBidders,
+    subject: 'BidSnap Obaveštava!',
+    text: `Poštovani,\nPoštovani, licitacija za predmet: "${title}" je završena. Nažalost, Vaša ponuda nije bila najviša, najviša ponuda je: ${offerPrice}EUR.\nVaš BidSnap!`,
+  };
+  
+  // onda saljemo ostalim ucesnicima
+  if (otherBidders.length >= 1) {
+    for (let i = 0; i < otherBidders?.length; i++) {
+      if (i === 0) {
+        mailOptionsBidders.to = otherBidders[i];
+      } else {
+        mailOptionsBidders.to += ', ' + otherBidders[i];
+      }
+    }
+    await transporter.sendMail(mailOptionsBidders);
+  }
+
+  console.log("Expire Obavestenje!");
+}
+
+let auctionData = {}; // cuva podatke trenutno aktivnih aukcija, kad istekne TTL brise se odavde
+
+function startAuctionWatcher() {
+  setInterval(async () => {
+    //const allAuctions = await client.sMembers("all_auctions:*");
+    const allAuctions = await client.keys("all_auctions:*");
+    const auctions = await client.keys("auction:*"); // Dobij sve aukcije
+
+    const allAuctionIds = allAuctions.map(auction => auction.split(":")[1]);
+    const auctionIds = auctions.map(auction => auction.split(":")[1]);
+
+    for (const id of auctionIds) {
+      const data = await client.hGetAll(`auction:${id}`);
+      auctionData[parseInt(id)] = data;
+    }
+
+    //console.log(auctionData["5"]);
+
+    const expiredAuctions = allAuctionIds.filter(auction => !auctionIds.includes(auction));
+
+    console.log(allAuctionIds);
+    console.log(auctionIds);
+    console.log(expiredAuctions);
+
+    //const winner = await client.zRangeWithScores(`offer:${parseInt(5)}`, -1, -1);
+    //console.log(winner[0].value.split(' ')[0]);
+
+    for (const id of expiredAuctions) {
+      console.log(`Aukcija ${id} je završena!`);
+
+      const title = auctionData[id].title;
+      console.log(title) 
+      const owner = auctionData[id].owner;
+      console.log(owner);
+      const offerPrice = auctionData[id].offer;
+      console.log("test")
+      
+      const winner = await client.zRangeWithScores(`offer:${parseInt(id)}`, -1, -1);
+      console.log(winner);
+      const winnerEmail = winner[0].value.split(' ')[0];
+      console.log(winnerEmail)
+
+      const bidders = await client.zRange(`offer:${parseInt(id)}`, 0, -1) || [];
+      console.log(bidders)
+      const emails = [...new Set(bidders.map(bidder => bidder.split(' ')[0]))];
+      const arrEmails = Array.from(emails);
+      console.log(arrEmails);
+
+      const otherBidders = arrEmails.filter(bidder => bidder.toString() !== winnerEmail.toString());
+
+      console.log(otherBidders);
+
+      console.log(`pre poziv`);
+      sendExpire(owner, winnerEmail, otherBidders, offerPrice, title);
+
+      await client.del(`all_auctions:${id}`);
+      await client.del(`offer:${id}`);
+      delete auctionData[id];
+    }
+  }, 5000); // provera svakih 5sec
+}
 
 
-// Pokretanje servera
+// server
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
+  startAuctionWatcher();
 });
