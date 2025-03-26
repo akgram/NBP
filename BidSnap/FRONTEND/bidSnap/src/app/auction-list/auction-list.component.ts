@@ -85,6 +85,9 @@ export class AuctionListComponent implements OnInit {
   // da znamo koja je forma otvorena :)
   location: string = "";
 
+  // timer za prikaz aukcije
+  isTimerAuctionVisible: boolean = false;
+
   constructor(private http: HttpClient, private router: Router) {}
 
   ngOnInit(): void {
@@ -182,6 +185,17 @@ export class AuctionListComponent implements OnInit {
         this.isButtonDisabled = false;
         this.isTimerVisible = false;
         this.timer = 5;
+      }
+    }, 1000);
+  }
+
+  startAuctionTimer() {
+    const interval = setInterval(() => {
+      this.timer--;
+      if (this.timer <= 0) {
+        clearInterval(interval);
+        this.isTimerAuctionVisible = false;
+        this.timer = 10;
       }
     }, 1000);
   }
@@ -385,8 +399,10 @@ export class AuctionListComponent implements OnInit {
           this.auctionOffer = 0;
           this.auctionImage = '';
 
-
+          
+          
           this.getAuctions();
+          this.isTimerAuctionVisible = true;
           this.getUsers();
           this.getOffers();
           this.closeAuctionForm();
@@ -394,6 +410,8 @@ export class AuctionListComponent implements OnInit {
         },
         error: (err) => {
           console.error('Greška pri dodavanju aukcije:', err);
+
+          this.isTimerAuctionVisible = false;
 
           this.auctionIdToEdit = null;
           this.auctionTitle = '';
@@ -535,13 +553,6 @@ export class AuctionListComponent implements OnInit {
   placeOffer() {
     console.log(this.range);
 
-    if(this.range === this.startPrice * 100)
-    {
-      alert("Čestitamo!\nKupili ste ovaj predmet po najvišoj ceni.")
-
-      // DAJ BACK-U DOZNANJA DA JE KUPLJEN PROIZVOD ili samo zovi delete za tu aukciju
-    }
-
     let old = this.offerPrice;
     this.offerPrice = this.range;
 
@@ -558,6 +569,19 @@ export class AuctionListComponent implements OnInit {
       alert('Ponuda uspešno ažurirana!');
 
       this.sendNotify(auctionData.bidder);
+
+      if(this.range === this.startPrice * 100)
+        {
+          alert("Čestitamo!\nKupili ste ovaj predmet po najvišoj ceni.")
+    
+          this.http.delete(`http://localhost:3000/auction/${this.id}`).subscribe({
+            next: () => {
+              this.auctions = this.auctions.filter(a => a.id !== this.id);
+            }
+          });
+    
+          // DAJ BACK-U DOZNANJA DA JE KUPLJEN PROIZVOD ili samo zovi delete za tu aukciju
+        }
 
       this.getAuctions();
       this.getUsers();

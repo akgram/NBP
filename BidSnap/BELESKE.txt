@@ -56,6 +56,10 @@ kad se zavrsi nadmetanje iz baze se citaju sve cene koje su ponudjene i najveca
 cena pobedjuje, tj email koji je ponudio najvise. (RESENO)
 
 kad se zavrsi svima stize obavestenje da je gotovo i da li je kupio proizvod (RESENO)
+
+ako se odma ponudi max cena, gotovo je (RESENO)
+
+bag da ne brise offer (RESENO)
 -----------------------------------------------------------------
 NEKA OBAVESTENJA:
 
@@ -72,6 +76,8 @@ Redis ne cuva poruke – ako klijent nije bio online u trenutku slanja, nece dob
 
 kad se doda aukcija id ide od najmanji (ne moze jer ce da se ponove neki id posle nekog trenutka)
 ------------------------------------------------------------------
+MOZE I NE MORA:
+
 licitiranje pocinje najkasnije 2min nakon stavljanja oglasa
 umedjuvremenu dok ne krene na sajt se prikazuje SOON sa sivim oglasom
 

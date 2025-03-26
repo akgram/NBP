@@ -421,8 +421,16 @@ async function sendExpire(owner, winnerEmail, otherBidders, offerPrice, title) {
     subject: 'BidSnap Obaveštava!',
     text: `Poštovani,\nZavršeno je javno nadmetanje za Vaš predmet: "${title}", konacna cena je: ${offerPrice}EUR.\nVaš BidSnap!`,
   };
+
+  //console.log("alooo");
+  //console.log(winnerEmail.length);
   // prvo saljemo mail owneru
-  if (owner.length > 0) {
+  if (owner.length > 0 && winnerEmail.length > 0) {
+    await transporter.sendMail(mailOptionsOwner);
+  }
+  else
+  {
+    mailOptionsOwner.text = `Poštovani,\nNiko nije licitirao za Vaš predmet: "${title}", konacna cena je: ${offerPrice}EUR.\nVaš BidSnap!`;
     await transporter.sendMail(mailOptionsOwner);
   }
 
@@ -499,27 +507,37 @@ function startAuctionWatcher() {
       console.log(owner);
       const offerPrice = auctionData[id].offer;
       console.log("test")
-      
-      const winner = await client.zRangeWithScores(`offer:${parseInt(id)}`, -1, -1);
-      console.log(winner);
-      const winnerEmail = winner[0].value.split(' ')[0];
-      console.log(winnerEmail)
 
-      const bidders = await client.zRange(`offer:${parseInt(id)}`, 0, -1) || [];
-      console.log(bidders)
-      const emails = [...new Set(bidders.map(bidder => bidder.split(' ')[0]))];
-      const arrEmails = Array.from(emails);
-      console.log(arrEmails);
+      const keys = await client.keys('offer:*');
+      const targetKey = `offer:${id}`;
+      if(keys.includes(targetKey))
+      {
+        const winner = await client.zRangeWithScores(`offer:${parseInt(id)}`, -1, -1);
+        console.log(winner);
+        const winnerEmail = winner[0].value.split(' ')[0];
+        console.log(winnerEmail)
 
-      const otherBidders = arrEmails.filter(bidder => bidder.toString() !== winnerEmail.toString());
+        const bidders = await client.zRange(`offer:${parseInt(id)}`, 0, -1) || [];
+        console.log(bidders)
+        const emails = [...new Set(bidders.map(bidder => bidder.split(' ')[0]))];
+        const arrEmails = Array.from(emails);
+        console.log(arrEmails);
 
-      console.log(otherBidders);
+        const otherBidders = arrEmails.filter(bidder => bidder.toString() !== winnerEmail.toString());
 
-      console.log(`pre poziv`);
-      sendExpire(owner, winnerEmail, otherBidders, offerPrice, title);
+        console.log(otherBidders);
+
+        //console.log(`pre poziv`);
+        sendExpire(owner, winnerEmail, otherBidders, offerPrice, title);
+
+        await client.del(`offer:${id}`);
+      }
+      else
+      {
+        sendExpire(owner, 1, 1, offerPrice, title); // ako nema offer ne prosledjujemo winner i offerPrice
+      }
 
       await client.del(`all_auctions:${id}`);
-      await client.del(`offer:${id}`);
       delete auctionData[id];
     }
   }, 5000); // provera svakih 5sec
