@@ -37,10 +37,33 @@
               </div>
             </div>
           </section>
-          <div class="card">
-            <h3 class="card-title">Naslov Kartice</h3>
-            <p class="card-content">Ovde ide neki opis ili podaci koji treba da se prikažu.</p>
-        </div>
+          <div *ngFor="let item of mongoData" class="card">
+              <h3 class="card-title">
+                {{ item.dosijeId || item.opisVozilaId || item.tokDesavanjaId || item.opisLokacijeId || 'Detalji' }}
+              </h3>
+
+              <ng-container *ngIf="item.jmbg">
+                <p><strong>JMBG:</strong> {{ item.jmbg }}</p>
+                <p><strong>Dosije:</strong> {{ item.dosije || 'Nema dosijea' }}</p>
+              </ng-container>
+
+              <ng-container *ngIf="item.id">
+                <p><strong>Opis:</strong> {{ item.opis || item.tok || 'Nema opisa' }}</p>
+              </ng-container>
+
+              
+              <div *ngIf="item.slike && item.slike.length > 0">
+                <h4>Slike:</h4>
+                <div class="slike-container">
+                  <img
+                    *ngFor="let slika of item.slike"
+                    [src]="slika"
+                    alt="Slika"
+                    class="slika"
+                  />
+                </div>
+              </div>
+          </div>
     </div>
   
     <div class="center-panel">

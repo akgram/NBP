@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const neo4j = require('neo4j-driver');
 const e = require('express');
+const mongoose = require('mongoose');
 
 // connect sa bazom
 const driver = neo4j.driver('bolt://localhost:7687', neo4j.auth.basic('neo4j', 'acavrbaCrim'));
@@ -13,6 +14,13 @@ module.exports = { driver, session };
 
 const app = express();
 const PORT = 3000;
+
+const uri = 'mongodb://localhost:27017/admin';
+
+// connect sa bazom mongo
+mongoose.connect(uri, {})
+            .catch((err) => {console.error('Greska pri konekciji sa mongoDB:', err);});
+
 
 // Middleware
 app.use(cors());
@@ -49,6 +57,145 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+////////////////////////////////MONGO
+// Šema i model
+const DosijeSchema = new mongoose.Schema({
+  jmbg: String,
+  biografija: String,
+  slike: [String],
+  opasnost: String,
+  dosijeId: String
+});
+
+const OpisVozilaSchema = new mongoose.Schema({
+  id: Number,
+  opisVozilaId: String,
+  opis: String,
+  slike: [String],
+});
+
+const TokDesavanjaSchema = new mongoose.Schema({
+  id: Number,
+  tokDesavanjaId: String,
+  tok: String,
+  slike: [String],
+});
+
+const OpisLokacijeSchema = new mongoose.Schema({
+  id: Number,
+  opisLokacijeIdId: String,
+  opis: String,
+  slike: [String],
+});
+
+const Dosije = mongoose.model('Dosije', DosijeSchema, 'dosijei'); // kolekcija: dosijei
+
+const OpisVozila = mongoose.model('OpisVozila', OpisVozilaSchema, 'opisi_vozila');
+
+const TokDesavanja = mongoose.model('TokDesavanja', TokDesavanjaSchema, 'tokovi_desavanja');
+
+const OpisLokacije = mongoose.model('OpisLokacije', OpisLokacijeSchema, 'opisi_lokacija');
+
+// Ruta: dobavljanje dosijea po jmbg/id čvora
+app.get('/api/mongo/:id/:type', async (req, res) => {
+  const selectedId = req.params.id;
+  const selectedType = req.params.type;
+  console.log("test");
+  console.log(selectedId);
+  console.log(selectedType);
+
+  try {
+    if(selectedType == "Kriminalac")
+    {
+      const dosije = await Dosije.findOne({ jmbg: selectedId });
+
+      if (!dosije) {
+        res.status(200).json({
+          jmbg: selectedId,
+          dosijeId: '',
+          dosije: '',
+          slike: '',
+        });
+        return;
+      }
+
+      res.status(200).json({
+        jmbg: dosije.jmbg,
+        dosijeId: dosije.dosijeId,
+        dosije: dosije.dosije,
+        slike: dosije.slike
+      });
+    }
+    else if (selectedType == "Vozilo")
+    {
+      const opisVozila = await OpisVozila.findOne({ id: selectedId });
+
+      if (!opisVozila) {
+        res.status(200).json({
+          id: selectedId,
+          opisVozilaId: '',
+          opis: '',
+          slike: '',
+        });
+        return;
+      }
+
+      res.status(200).json({
+        id: opisVozila.id,
+        opisVozilaId: opisVozila.opisVozilaId,
+        opis: opisVozila.opis,
+        slike: opisVozila.slike
+      });
+    }
+    else if (selectedType == "Incident")
+    {
+      const tokDesavanja = await TokDesavanja.findOne({ id: selectedId });
+
+      if (!tokDesavanja) {
+        res.status(200).json({
+          id: selectedId,
+          tokDesavanjaId: '',
+          tok: '',
+          slike: '',
+        });
+        return;
+      }
+
+      res.status(200).json({
+        id: tokDesavanja.id,
+        tokDesavanjaId: tokDesavanja.tokDesavanjaId,
+        tok: tokDesavanja.tok,
+        slike: tokDesavanja.slike
+      });
+    }
+    else if (selectedType == "Lokacija") 
+    {
+      const opisLokacije = await OpisLokacije.findOne({ id: selectedId });
+
+      if (!opisLokacije) {
+        res.status(200).json({
+          id: selectedId,
+          opisLokacijeId: '',
+          opis: '',
+          slike: '',
+        });
+        return;
+      }
+
+      res.status(200).json({
+        id: opisLokacije.id,
+        opisLokacijeId: opisLokacije.opisLokacijeId,
+        opis: opisLokacije.opis,
+        slike: opisLokacije.slike
+      });
+    }
+  } catch (error) {
+    console.error('Greška pri dohvatanju dosijea iz MongoDB:', error);
+    res.status(500).json({ message: 'Greška na serveru.' });
+  }
+});
+
+/////////////////////////////////NEO4J
 app.get('/api/baza', async (req, res) => {
   try {
     const result = await session.run(`MATCH (n) WHERE NOT n:User OPTIONAL MATCH (n)-[r]->(m) RETURN 
@@ -795,5 +942,6 @@ app.post('/api/edit-edge/:name/:sourceNodeId/:sourceNodeType/:targetNodeId/:targ
 
 // server
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Neo4j server is running on http://localhost:${PORT}`);
+  console.log(`MongoDB server is running on http://localhost:27017`);
 });

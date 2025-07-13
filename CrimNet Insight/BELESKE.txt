@@ -35,7 +35,17 @@ polja su podaci Kriminalca. // RESENO
 
 -update za veze i to je to // RESENOOO
 
+-mongoDB GET imamo
+
 ----------------------------------------
+
+-mongoDB POST (nakon sto se doda node opcija za dodavanje opisa)
+
+-mongoDB EDIT
+
+-mongoDB DELETE (da se brise samo kad se obrise i node sa neo4j)
+
+-ako je na BAZA, ne moze da se vidi kartica Node-a
 
 -DOCKEEEER
 

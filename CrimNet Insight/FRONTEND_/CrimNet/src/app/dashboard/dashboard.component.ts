@@ -18,12 +18,33 @@ import { error, log } from 'console';
 })
 export class DashboardComponent implements OnInit {
 
+  mongoData: any[] = [];
   data: any[] = [];
   title: string = '';
 
   constructor(private dataService: DataService, private http: HttpClient) {}
 
   ngOnInit(): void {}
+
+    onNodeClick(id: any, type: any): void {
+    this.dataService.getMongo(id, type).subscribe({
+      next: (response) => {
+        //this.mongoData = response;
+        console.log(this.data);
+
+        if (Array.isArray(response)) {
+          this.mongoData = response;
+        } else if (response) {
+          this.mongoData = [response]; // napravi niz sa jednim elementom
+        } else {
+          this.mongoData = [];
+        }
+      },
+      error: (err) => {
+        console.error('Greška prilikom preuzimanja iz Mongo baze:', err);
+      }
+    });
+  }
 
   onBazaClick(): void {
     this.selectedNode = null;
@@ -280,6 +301,7 @@ export class DashboardComponent implements OnInit {
         // Postavljamo listener za selektovanje čvora
         this.network.on('selectNode', (event: any) => {
           this.selectedNode = event.nodes[0]; // Čuvanje ID-a selektovanog čvora
+          // poziv mongodb
           const allNodes = nodesData.get();
           const selectedNodeData = allNodes.find(node => node.id === this.selectedNode);
           if (selectedNodeData) {
@@ -288,6 +310,10 @@ export class DashboardComponent implements OnInit {
               type: selectedNodeData.title, // Tip iz nodesData (Kriminalac, Vozilo...)
               color: selectedNodeData.color // Boja čvora
             };
+            
+            if(title !== "Baza")
+              this.onNodeClick(this.selectedNode.id, this.selectedNode.type);
+
           } else {
             this.selectedNode = null;
           }

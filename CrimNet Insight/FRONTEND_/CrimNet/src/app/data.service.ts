@@ -8,6 +8,10 @@ import { Observable } from 'rxjs';
 export class DataService {
   constructor(private http: HttpClient) {}
 
+  getMongo(id: any, type: any): Observable<any> {
+    return this.http.get(`/api/mongo/${id}/${type}`);
+  }
+
   getBaza(): Observable<any> {
     return this.http.get('/api/baza');
   }
