@@ -18,9 +18,14 @@ import { error, log } from 'console';
 })
 export class DashboardComponent implements OnInit {
 
-  mongoData: any[] = [];
   data: any[] = [];
   title: string = '';
+  
+  mongoData: any[] = [];
+  selectedFile: File | null = null;
+  opis: string = '';
+  isEditing: boolean = false;
+  addOpis: boolean = false;
 
   constructor(private dataService: DataService, private http: HttpClient) {}
 
@@ -31,6 +36,7 @@ export class DashboardComponent implements OnInit {
       next: (response) => {
         //this.mongoData = response;
         console.log(this.data);
+        console.log('mongoooo', this.mongoData);
 
         if (Array.isArray(response)) {
           this.mongoData = response;
@@ -39,12 +45,124 @@ export class DashboardComponent implements OnInit {
         } else {
           this.mongoData = [];
         }
+
+        if(this.mongoData[0].dosije === '')
+        {
+            this.addOpis = true;
+            this.isEditing = false;
+            this.opis = '';
+        }
+        else
+        {
+          this.addOpis = false;
+          this.isEditing = true;
+          this.opis = this.mongoData[0].dosije || this.mongoData[0].opis || this.mongoData[0].tok;
+        }
       },
       error: (err) => {
         console.error('Greška prilikom preuzimanja iz Mongo baze:', err);
       }
     });
   }
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      //console.log(input.files[0]);
+      this.selectedFile = input.files[0];
+      console.log('Izabrana slika:', this.selectedFile.name);
+    }
+  }
+
+  onSaveMongo() {
+    if (!this.selectedFile) {
+      alert('Niste izabrali fajl!');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('slika', this.selectedFile.name);
+    formData.append('id', this.selectedNode.id);
+    formData.append('type', this.selectedNode.type);
+    formData.append('opis', this.opis);
+
+    this.dataService.saveMongo(formData).subscribe({
+      next: (response) => {
+        console.log(response);
+        alert('Uspešno ste dodali dosije/opis/sliku u bazu!');
+        if(this.title == 'Kriminalac')
+        {
+          this.onAkteriClick();
+        }
+        else if(this.title == 'Vozilo')
+        {
+          this.onVozilaClick();
+        }
+        else if(this.title == 'Incident')
+        {
+          this.onIncidentiClick();
+        }
+        else if(this.title == 'Lokacija')
+        {
+          this.onLokacijeClick();
+        }
+        else if(this.title == 'Baza')
+        {
+          this.onBazaClick();
+        }
+      },
+      error: (err) => {
+        console.error('Greška prilikom upload-ovanja slike: ', err);
+      }
+    });
+  }
+
+  onEditMongo() {
+
+    const formData = new FormData();
+    if(this.selectedFile)
+    {
+      formData.append('slika', this.selectedFile.name); // ili selectFile ili naziv.jpg
+    }
+    else
+    {
+      formData.append('slika', this.mongoData[0].slika);
+    }
+    formData.append('id', this.selectedNode.id);
+    formData.append('type', this.selectedNode.type);
+    formData.append('opis', this.opis);
+
+    this.dataService.editMongo(formData).subscribe({
+      next: (response) => {
+        console.log(response);
+        alert('Uspešno ste izmenili dosije/opis/sliku u bazu!');
+
+        if(this.title == 'Kriminalac')
+        {
+          this.onAkteriClick();
+        }
+        else if(this.title == 'Vozilo')
+        {
+          this.onVozilaClick();
+        }
+        else if(this.title == 'Incident')
+        {
+          this.onIncidentiClick();
+        }
+        else if(this.title == 'Lokacija')
+        {
+          this.onLokacijeClick();
+        }
+        else if(this.title == 'Baza')
+        {
+          this.onBazaClick();
+        }
+      },
+      error: (err) => {
+        console.error('Greška prilikom upload-ovanja slike: ', err);
+      }
+    });
+}
 
   onBazaClick(): void {
     this.selectedNode = null;
@@ -301,7 +419,6 @@ export class DashboardComponent implements OnInit {
         // Postavljamo listener za selektovanje čvora
         this.network.on('selectNode', (event: any) => {
           this.selectedNode = event.nodes[0]; // Čuvanje ID-a selektovanog čvora
-          // poziv mongodb
           const allNodes = nodesData.get();
           const selectedNodeData = allNodes.find(node => node.id === this.selectedNode);
           if (selectedNodeData) {
@@ -311,6 +428,7 @@ export class DashboardComponent implements OnInit {
               color: selectedNodeData.color // Boja čvora
             };
             
+            // poziv mongodb
             if(title !== "Baza")
               this.onNodeClick(this.selectedNode.id, this.selectedNode.type);
 

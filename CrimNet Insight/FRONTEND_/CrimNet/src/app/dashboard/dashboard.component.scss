@@ -53,7 +53,7 @@
   
   .center-panel {
     width: 80%;
-    height: 90%;
+    height: 95.5%;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -80,7 +80,7 @@
   }
 
   .note-container {
-    margin-top: 16px;
+    margin-top: 110%;
     display: flex;
     justify-content: center;
 }
@@ -93,6 +93,15 @@
     border: 1px solid #ccc;
     border-radius: 8px;
     resize: vertical;
+    margin-right: 75px;
+}
+
+.upload-container {
+  display: flex;
+  flex-direction: column;
+  width: 90%;
+  gap: 10px;
+  margin: 20px;
 }
 
  //////////////////////////////////// LEVA STRANA 
@@ -123,9 +132,37 @@
   background-color: white;
 }
 
+//.edit-btnMongo {
+//  position: absolute;
+//  top: 8px;
+//  right: 8px;
+//  background-color: transparent;
+ // border: none;
+ // cursor: pointer;
+ // font-size: 16px;
+ // color: #007bff;
+//}
+.edit-btn:hover {
+  color: #0056b3;
+  transform: scale(1.1);
+}
+
+.button-row {
+  display: flex;
+  gap: 10px; /* razmak između dugmadi */
+  margin-top: 10px;
+}
+
+.button-row button {
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+
 .slika {
   max-width: 100%;  /* Slika se prilagođava širini kartice, ali je ne prelazi */
-  height: auto;     /* Održava odnos širine i visine */
+  height: 50%;     /* Održava odnos širine i visine */
   display: block;
   margin-bottom: 10px; /* Razmak između slika ili drugih elemenata */
   object-fit: contain; /* Slika se skalira da stane u okvir bez isecanja */

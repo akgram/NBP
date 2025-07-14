@@ -12,6 +12,16 @@ export class DataService {
     return this.http.get(`/api/mongo/${id}/${type}`);
   }
 
+  saveMongo(formData: any) : Observable<any> {
+    return this.http.post('/api/mongoSave', formData);
+
+  }
+
+  editMongo(formData: any) : Observable<any> {
+    return this.http.put('/api/mongoEdit', formData);
+
+  }
+
   getBaza(): Observable<any> {
     return this.http.get('/api/baza');
   }

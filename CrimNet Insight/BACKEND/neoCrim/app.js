@@ -4,6 +4,22 @@ const cors = require('cors');
 const neo4j = require('neo4j-driver');
 const e = require('express');
 const mongoose = require('mongoose');
+const multer = require('multer');
+const path = require('path');
+
+
+// konfiguracija multer-a za upload slike
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + '-' + file.originalname;
+    cb(null, uniqueName);
+  }
+});
+const upload = multer({ storage: storage });
+
 
 // connect sa bazom
 const driver = neo4j.driver('bolt://localhost:7687', neo4j.auth.basic('neo4j', 'acavrbaCrim'));
@@ -14,6 +30,8 @@ module.exports = { driver, session };
 
 const app = express();
 const PORT = 3000;
+console.log('UPLOADS FOLDER:', path.join(__dirname, 'uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const uri = 'mongodb://localhost:27017/admin';
 
@@ -61,31 +79,31 @@ app.post('/api/login', async (req, res) => {
 // Šema i model
 const DosijeSchema = new mongoose.Schema({
   jmbg: String,
-  biografija: String,
-  slike: [String],
+  dosije: String,
   opasnost: String,
-  dosijeId: String
+  dosijeId: String,
+  slika: String,
 });
 
 const OpisVozilaSchema = new mongoose.Schema({
   id: Number,
   opisVozilaId: String,
   opis: String,
-  slike: [String],
+  slika: String,
 });
 
 const TokDesavanjaSchema = new mongoose.Schema({
   id: Number,
   tokDesavanjaId: String,
   tok: String,
-  slike: [String],
+  slika: String,
 });
 
 const OpisLokacijeSchema = new mongoose.Schema({
   id: Number,
-  opisLokacijeIdId: String,
+  opisLokacijeId: String,
   opis: String,
-  slike: [String],
+  slika: String,
 });
 
 const Dosije = mongoose.model('Dosije', DosijeSchema, 'dosijei'); // kolekcija: dosijei
@@ -96,11 +114,10 @@ const TokDesavanja = mongoose.model('TokDesavanja', TokDesavanjaSchema, 'tokovi_
 
 const OpisLokacije = mongoose.model('OpisLokacije', OpisLokacijeSchema, 'opisi_lokacija');
 
-// Ruta: dobavljanje dosijea po jmbg/id čvora
+// GET /api/mongo
 app.get('/api/mongo/:id/:type', async (req, res) => {
   const selectedId = req.params.id;
   const selectedType = req.params.type;
-  console.log("test");
   console.log(selectedId);
   console.log(selectedType);
 
@@ -114,7 +131,7 @@ app.get('/api/mongo/:id/:type', async (req, res) => {
           jmbg: selectedId,
           dosijeId: '',
           dosije: '',
-          slike: '',
+          slika: '',
         });
         return;
       }
@@ -123,7 +140,7 @@ app.get('/api/mongo/:id/:type', async (req, res) => {
         jmbg: dosije.jmbg,
         dosijeId: dosije.dosijeId,
         dosije: dosije.dosije,
-        slike: dosije.slike
+        slika: dosije.slika
       });
     }
     else if (selectedType == "Vozilo")
@@ -135,7 +152,7 @@ app.get('/api/mongo/:id/:type', async (req, res) => {
           id: selectedId,
           opisVozilaId: '',
           opis: '',
-          slike: '',
+          slika: '',
         });
         return;
       }
@@ -144,7 +161,7 @@ app.get('/api/mongo/:id/:type', async (req, res) => {
         id: opisVozila.id,
         opisVozilaId: opisVozila.opisVozilaId,
         opis: opisVozila.opis,
-        slike: opisVozila.slike
+        slika: opisVozila.slika
       });
     }
     else if (selectedType == "Incident")
@@ -156,7 +173,7 @@ app.get('/api/mongo/:id/:type', async (req, res) => {
           id: selectedId,
           tokDesavanjaId: '',
           tok: '',
-          slike: '',
+          slika: '',
         });
         return;
       }
@@ -165,7 +182,7 @@ app.get('/api/mongo/:id/:type', async (req, res) => {
         id: tokDesavanja.id,
         tokDesavanjaId: tokDesavanja.tokDesavanjaId,
         tok: tokDesavanja.tok,
-        slike: tokDesavanja.slike
+        slika: tokDesavanja.slika
       });
     }
     else if (selectedType == "Lokacija") 
@@ -177,7 +194,7 @@ app.get('/api/mongo/:id/:type', async (req, res) => {
           id: selectedId,
           opisLokacijeId: '',
           opis: '',
-          slike: '',
+          slika: '',
         });
         return;
       }
@@ -186,11 +203,158 @@ app.get('/api/mongo/:id/:type', async (req, res) => {
         id: opisLokacije.id,
         opisLokacijeId: opisLokacije.opisLokacijeId,
         opis: opisLokacije.opis,
-        slike: opisLokacije.slike
+        slika: opisLokacije.slika
       });
     }
   } catch (error) {
     console.error('Greška pri dohvatanju dosijea iz MongoDB:', error);
+    res.status(500).json({ message: 'Greška na serveru.' });
+  }
+});
+
+
+// POST /api/mongo
+app.post('/api/mongoSave', upload.single('slika'), async (req, res) => {
+  const { id, type, opis, slika} = req.body;
+  //const slika = req.body.slika ? req.body.slika.filename : '';
+
+  console.log('id, type, opis: ', id, type, opis);
+  console.log('slika: ', slika);
+
+  try {
+    if (type === "Kriminalac") {
+      const poslednji = await Dosije.findOne().sort({ dosijeId: -1 });
+
+      let noviBroj = 1;
+      if (poslednji && poslednji.dosijeId) {
+        const broj = parseInt(poslednji.dosijeId.split('-')[1], 10);
+        noviBroj = broj + 1;
+      }
+      const dosijeId = `DSJ-${String(noviBroj).padStart(3, '0')}`;
+
+      const dosije = new Dosije({
+        jmbg: id,
+        dosijeId: dosijeId,
+        dosije: opis,
+        slika: slika
+      });
+      await dosije.save();
+    } else if (type === "Vozilo") {
+      const poslednji = await OpisVozila.findOne().sort({ opisVozilaId: -1 });
+
+      let noviBroj = 1;
+      if (poslednji && poslednji.opisVozilaId) {
+        const broj = parseInt(poslednji.opisVozilaId.split('-')[1], 10);
+        noviBroj = broj + 1;
+      }
+      const opisVozilaId = `OV-${String(noviBroj).padStart(3, '0')}`;
+
+      const opisVozila = new OpisVozila({
+        id,
+        opisVozilaId: opisVozilaId,
+        opis,
+        slika: slika
+      });
+      await opisVozila.save();
+    } else if (type === "Incident") {
+      const poslednji = await TokDesavanja.findOne().sort({ tokDesavanjaId: -1 });
+
+      let noviBroj = 1;
+      if (poslednji && poslednji.tokDesavanjaId) {
+        const broj = parseInt(poslednji.tokDesavanjaId.split('-')[1], 10);
+        noviBroj = broj + 1;
+      }
+      const tokDesavanjaId = `TD-${String(noviBroj).padStart(3, '0')}`;
+
+      const tokDesavanja = new TokDesavanja({
+        id,
+        tokDesavanjaId: tokDesavanjaId,
+        tok: opis,
+        slika: slika
+      });
+      await tokDesavanja.save();
+    } else if (type === "Lokacija") {
+      const poslednji = await OpisLokacije.findOne().sort({ opisLokacijeId: -1 });
+
+      let noviBroj = 1;
+      if (poslednji && poslednji.opisLokacijeId) {
+        const broj = parseInt(poslednji.opisLokacijeId.split('-')[1], 10);
+        noviBroj = broj + 1;
+      }
+      const opisLokacijeId = `OL-${String(noviBroj).padStart(3, '0')}`;
+
+      const opisLokacije = new OpisLokacije({
+        id,
+        opisLokacijeId: opisLokacijeId,
+        opis,
+        slika: slika
+      });
+      await opisLokacije.save();
+    } else {
+      return res.status(400).json({ message: "Nepoznat tip" });
+    }
+
+    res.status(200).json({ message: "Uspešno sačuvano", nazivSlike: slika });
+
+  } catch (error) {
+    console.error('Greška pri snimanju:', error);
+    res.status(500).json({ message: 'Greška na serveru.' });
+  }
+});
+
+// PUT /api/mongoEdit
+app.put('/api/mongoEdit', upload.single('slika'), async (req, res) => {
+  const { id, type, opis, slika} = req.body;
+
+  console.log('id, type, opis: ', id, type, opis);
+  console.log('slika: ', slika);
+
+  try {
+    if (type === "Kriminalac") {
+      const updated = await Dosije.findOneAndUpdate( { jmbg: id },
+        { dosije: opis, slika: slika },
+        { new: true }
+      );
+
+      if (!updated) 
+        return res.status(404).json({ message: "Dosije nije pronađen." });
+    }
+     else if (type === "Vozilo") {
+      const updated = await OpisVozila.findOneAndUpdate( { id: id },
+        { opis: opis, slika: slika },
+        { new: true }
+      );
+
+      if (!updated) 
+        return res.status(404).json({ message: "Opis nije pronađen." });
+    } 
+    else if (type === "Incident") {
+      const updated = await tokDesavanja.findOneAndUpdate( { id: id },
+        { opis: opis, slika: slika },
+        { new: true }
+      );
+
+      if (!updated) 
+        return res.status(404).json({ message: "Opis nije pronađen." });
+    } 
+    else if (type === "Lokacija") {
+      const updated = await OpisLokacije.findOneAndUpdate( { id: id },
+        { opis: opis, slika: slika },
+        { new: true }
+      );
+
+      if (!updated) 
+        return res.status(404).json({ message: "Opis nije pronađen." });
+    } 
+    else {
+      return res.status(400).json({ message: "Nepoznat tip" });
+    }
+
+    return res.status(200).json({ message: "Uspešno izmenjeno." });
+
+  } 
+  catch (error) {
+    console.error('Greška pri snimanju:', error);
     res.status(500).json({ message: 'Greška na serveru.' });
   }
 });
