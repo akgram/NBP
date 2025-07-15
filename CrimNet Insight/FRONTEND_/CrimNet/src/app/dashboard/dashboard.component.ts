@@ -46,7 +46,7 @@ export class DashboardComponent implements OnInit {
           this.mongoData = [];
         }
 
-        if(this.mongoData[0].dosije === '')
+        if(this.mongoData[0].dosije === '' || this.mongoData[0].opis === '' || this.mongoData[0].tok === '')
         {
             this.addOpis = true;
             this.isEditing = false;
@@ -81,7 +81,7 @@ export class DashboardComponent implements OnInit {
     }
 
     const formData = new FormData();
-    formData.append('slika', this.selectedFile.name);
+    formData.append('slika', this.selectedFile);
     formData.append('id', this.selectedNode.id);
     formData.append('type', this.selectedNode.type);
     formData.append('opis', this.opis);
@@ -120,14 +120,14 @@ export class DashboardComponent implements OnInit {
   onEditMongo() {
 
     const formData = new FormData();
-    if(this.selectedFile)
-    {
-      formData.append('slika', this.selectedFile.name); // ili selectFile ili naziv.jpg
+
+    if (this.selectedFile) {
+      formData.append('slika', this.selectedFile);
+    } 
+    else {
+      formData.append('staraSlika', this.mongoData[0].slika); // samo string
     }
-    else
-    {
-      formData.append('slika', this.mongoData[0].slika);
-    }
+
     formData.append('id', this.selectedNode.id);
     formData.append('type', this.selectedNode.type);
     formData.append('opis', this.opis);
@@ -162,7 +162,40 @@ export class DashboardComponent implements OnInit {
         console.error('Greška prilikom upload-ovanja slike: ', err);
       }
     });
-}
+  }
+
+  onDelMongo() {
+    this.dataService.delMongo(this.selectedNode.id, this.selectedNode.type).subscribe({
+      next: (response) => {
+        console.log(response);
+        alert('Uspešno ste obrisali dosije/opis/sliku iz baze!');
+
+        if(this.title == 'Kriminalac')
+        {
+          this.onAkteriClick();
+        }
+        else if(this.title == 'Vozilo')
+        {
+          this.onVozilaClick();
+        }
+        else if(this.title == 'Incident')
+        {
+          this.onIncidentiClick();
+        }
+        else if(this.title == 'Lokacija')
+        {
+          this.onLokacijeClick();
+        }
+        else if(this.title == 'Baza')
+        {
+          this.onBazaClick();
+        }
+      },
+      error: (err) => {
+        console.error('Greška prilikom brisanja dosijea/opisa: ', err);
+      }
+    });
+  }
 
   onBazaClick(): void {
     this.selectedNode = null;
@@ -197,7 +230,7 @@ export class DashboardComponent implements OnInit {
     this.title = 'Vozilo';
     this.dataService.getVozila().subscribe({
       next: (response) => {
-        console.log('Vozila data:', response);  // Dodaj ovo da proveriš šta dobijaš
+        console.log('Vozila data:', response);
         this.data = response;
         this.drawGraph(response.nodes, response.edges, this.title);
       },
@@ -212,7 +245,7 @@ export class DashboardComponent implements OnInit {
     this.title = 'Incident';
     this.dataService.getIncidenti().subscribe({
       next: (response) => {
-        console.log('Incidenti data:', response);  // Dodaj ovo da proveriš šta dobijaš
+        console.log('Incidenti data:', response);
         this.data = response;
         this.drawGraph(response.nodes, response.edges, this.title);
       },
@@ -227,7 +260,7 @@ export class DashboardComponent implements OnInit {
     this.title = 'Lokacija';
     this.dataService.getLokacije().subscribe({
       next: (response) => {
-        console.log('Lokacije data:', response);  // Dodaj ovo da proveriš šta dobijaš
+        console.log('Lokacije data:', response);
         this.data = response;
         this.drawGraph(response.nodes, response.edges, this.title);
       },
@@ -240,15 +273,15 @@ export class DashboardComponent implements OnInit {
   getNodeColor(title: string) {
     switch (title) {
       case 'Kriminalac':
-        return { background: '#b30059', border: 'black' };  // Tamnoroze
+        return { background: '#b30059', border: 'black' };
       case 'Incident':
-        return { background: '#800000', border: 'black' };  // Tamnocrveno
+        return { background: '#800000', border: 'black' };
       case 'Vozilo':
-        return { background: '#000080', border: 'black' };  // Tamnoplavo
+        return { background: '#000080', border: 'black' }; 
       case 'Lokacija':
-        return { background: '#cc5500', border: 'black' };  // Tamnonarandžasto
+        return { background: '#cc5500', border: 'black' };
       default:
-        return { background: '#4d4d4d', border: 'black' };  // Tamnosivo
+        return { background: '#4d4d4d', border: 'black' };
     }
   }  
 
@@ -277,7 +310,7 @@ export class DashboardComponent implements OnInit {
           id: node.id.toString(),
           label: node.label,
           title: node.title, 
-          color: this.getNodeColor(node.title) // Svaki čvor dobija svoju boju
+          color: this.getNodeColor(node.title) // svaki cvor dobija svoju boju
         })));
 
       }
@@ -300,7 +333,7 @@ export class DashboardComponent implements OnInit {
           shape: 'dot',
           size: 29,
           font: { size: 15, color: 'black' },
-          ...(title !== "Baza" && { color: this.getNodeColor(title) }) //kad se pojedinacno zovu tipovi, inace za celu bazu se DataSetuje
+          ...(title !== "Baza" && { color: this.getNodeColor(title) }) // kad se pojedinacno zovu tipovi, inace za celu bazu se DataSetuje
         },
         edges: {
           color: 'white',
@@ -308,7 +341,7 @@ export class DashboardComponent implements OnInit {
           length: 300,
           //smooth: false,
           arrows: {
-            to: { enabled: true, scaleFactor: 0.7, type: 'arrow' } // Dodavanje strelice na kraju
+            to: { enabled: true, scaleFactor: 0.7, type: 'arrow' } // strelica na kraju veze
           }
         },
         physics: {
@@ -320,9 +353,9 @@ export class DashboardComponent implements OnInit {
             springLength: 200, // duzina veze
             springConstant: 0.08,
           },
-          maxVelocity: 30, // Maksimalna brzina kretanja čvorova
-            minVelocity: 0.75, // Minimalna brzina
-            timestep: 0.5, // Korak vremena za svako ažuriranje
+          maxVelocity: 30, // maksimalna brzina kretanja cvorova
+            minVelocity: 0.75, // minimalna brzina
+            timestep: 0.5, // korak vremena za svako azuriranje
         },
         interaction: { hover: true },
         manipulation: { 
@@ -342,8 +375,8 @@ export class DashboardComponent implements OnInit {
             const sourceNode = data.from;
             const targetNode = data.to;
       
-            console.log('Izvorni čvor ID:', sourceNode);
-            console.log('Ciljni čvor ID:', targetNode);
+            console.log('Izvorni cvor ID:', sourceNode);
+            console.log('Ciljni cvor ID:', targetNode);
             let type1 = null;
             let type2 = null;
             let baza = false
@@ -367,7 +400,7 @@ export class DashboardComponent implements OnInit {
             if(!edgeName)
               return;
             
-            data.label = edgeName;//////////////////////////??????????????????????????????????
+            data.label = edgeName; //////////////////////////??????????????????????????????????
 
             this.addEdge(sourceNode, targetNode, edgeName, type1, type2, baza);
             callback(data);
@@ -379,8 +412,8 @@ export class DashboardComponent implements OnInit {
             const newSourceNode = data.from;
             const newTargetNode = data.to;
             
-            console.log('Novi izvorni čvor ID:', newSourceNode);
-            console.log('Novi ciljni čvor ID:', newTargetNode);
+            console.log('Novi izvorni cvor ID:', newSourceNode);
+            console.log('Novi ciljni cvor ID:', newTargetNode);
             let newType1 = null;
             let newType2 = null;
             let baza = false
@@ -399,7 +432,7 @@ export class DashboardComponent implements OnInit {
               newType1 = this.title;
               newType2 = this.title;
             }
-            console.log("Veza spaja čvorove:", newSourceNode, "[", newType1, "]", "->", newTargetNode, "[", newType2, "]");
+            console.log("Veza spaja cvorove:", newSourceNode, "[", newType1, "]", "->", newTargetNode, "[", newType2, "]");
 
             if(this.editEdge(data.label, this.sourceNode, this.targetNode, newSourceNode, newTargetNode, newType1, newType2, baza))
               callback(data);
@@ -409,23 +442,20 @@ export class DashboardComponent implements OnInit {
         }
       };
   
-      // Kreiraj graf samo ako su podaci validni
       if (nodesData.length > 0) {
         this.network = new Network(container as HTMLElement, data, options);
         console.log('Graph initialized');
 
-        //let selectedNode = null; // Držimo selektovani čvor
-
-        // Postavljamo listener za selektovanje čvora
+        // listener za selektovanje cvora
         this.network.on('selectNode', (event: any) => {
-          this.selectedNode = event.nodes[0]; // Čuvanje ID-a selektovanog čvora
+          this.selectedNode = event.nodes[0]; // id selektovanog cvora
           const allNodes = nodesData.get();
           const selectedNodeData = allNodes.find(node => node.id === this.selectedNode);
           if (selectedNodeData) {
             this.selectedNode = {
               id: selectedNodeData.title !== 'Kriminalac' ? Number(this.selectedNode) : this.selectedNode.toString(),
-              type: selectedNodeData.title, // Tip iz nodesData (Kriminalac, Vozilo...)
-              color: selectedNodeData.color // Boja čvora
+              type: selectedNodeData.title,
+              color: selectedNodeData.color
             };
             
             // poziv mongodb
@@ -441,7 +471,7 @@ export class DashboardComponent implements OnInit {
         this.network.on("selectEdge", (params: any) => {
           if (params.edges.length > 0) {
             this.selectEdge = params.edges[0]; // ID veze koju je korisnik kliknuo
-            const connectedNodes = this.network.getConnectedNodes(this.selectEdge); // Dohvata ID čvorova koje veza spaja
+            const connectedNodes = this.network.getConnectedNodes(this.selectEdge); // Dohvata ID cvorova koje veza spaja
 
             console.log(nodesData.get().find(node => node.id === connectedNodes[0]).title);
             console.log(nodesData.get().find(node => node.id === connectedNodes[1]).title);
@@ -453,7 +483,7 @@ export class DashboardComponent implements OnInit {
               this.sourceNode[0] = connectedNodes[0];
               this.targetNode[0] = connectedNodes[1];
         
-              console.log("Veza spaja čvorove:", this.sourceNode[0], "[", this.sourceNode[1] ,"]", "->", this.targetNode[0], "[", this.targetNode[1] ,"]");
+              console.log("Veza spaja cvorove:", this.sourceNode[0], "[", this.sourceNode[1] ,"]", "->", this.targetNode[0], "[", this.targetNode[1] ,"]");
             }
           }
         });
@@ -493,7 +523,7 @@ confirmDeleteNode(data: any, callback: Function): void {
 
     this.dataService.deleteNodeFromDatabase(this.selectedNode.id, this.selectedNode.type, this.title).subscribe(
       (response) => {
-        console.log('Čvor uspešno obrisan iz baze', response);
+        console.log('Cvor uspesno obrisan iz baze', response);
         alert('Element uspešno obrisan iz baze!');
         this.network.body.data.nodes.remove(this.selectedNode.id);
       },
@@ -508,7 +538,7 @@ confirmDeleteNode(data: any, callback: Function): void {
 
 confirmDeleteEdge(data: any, callback: Function): void {
 
-  const confirmed = confirm('Da li ste sigurni da zelite da obrisete ovu vezu?');
+  const confirmed = confirm('Da li ste sigurni da želite da obrišete ovu vezu?');
   
   if (confirmed) {
 
@@ -533,14 +563,14 @@ confirmDeleteEdge(data: any, callback: Function): void {
 
 /////////////////////////////////////////////////////////////////////////////////////////
 //add element
-  nodeTypes: string[] = []; // Lista tipova čvorova
-  selectedType: string = ''; // Izabrani tip
-  nodeAttributes: string[] = []; // Izabrani tip
+  nodeTypes: string[] = []; // lista tipova cvorova
+  selectedType: string = ''; // izabrani tip
+  nodeAttributes: string[] = []; // izabrani tip
 
   loadNodeTypes() {
     this.dataService.getTipovi().subscribe({
       next: (data) => {
-        this.nodeTypes = data; // Ubacujemo tipove u listu
+        this.nodeTypes = data; // ubacujemo tipove u listu
       },
       error: (error) => {
         console.error('Greška pri učitavanju tipova:', error);
@@ -549,11 +579,11 @@ confirmDeleteEdge(data: any, callback: Function): void {
   }
 
   loadNodeAttributes() {
-    if (!this.selectedType) return; // Proveri da li je tip izabran
+    if (!this.selectedType) return;
   
     this.dataService.getAttributesForType(this.selectedType).subscribe({
       next: (data) => {
-        this.nodeAttributes = data; // Atributi za selektovani tip
+        this.nodeAttributes = data; // atributi za selektovani tip
         console.log(this.nodeAttributes);
         this.nodeAttributes = this.nodeAttributes.map(type => type.charAt(0).toUpperCase() + type.slice(1).toLowerCase());
       },
@@ -610,8 +640,8 @@ confirmDeleteEdge(data: any, callback: Function): void {
     .subscribe({
       next: (data) => {
         console.log(data);
-        this.nodeAttributes = Object.keys(data); // Uzimaš sve ključeve objekta kao nazive atributa
-        this.inputFields = Object.values(data); // Uzimaš vrednosti objekta za input polja
+        this.nodeAttributes = Object.keys(data); // uzimamo sve kljuceve objekta kao nazive atributa
+        this.inputFields = Object.values(data); // uzimamo vrednosti objekta za input polja
         console.log('Node attributes:', this.nodeAttributes);
         console.log('Input fields:', this.inputFields);
       },
@@ -622,10 +652,11 @@ confirmDeleteEdge(data: any, callback: Function): void {
   }  
   
 
-  inputFields: string[] = []; // Polja koja će biti generisana
-  // Metoda koja ažurira broj input polja na osnovu izabranog tipa
+  inputFields: string[] = []; // polja koja će biti generisana
+
+  // azurira broj input polja na osnovu izabranog tipa
   updateInputFields() {
-    this.inputFields = []; // Resetovanje polja
+    this.inputFields = []; // reset polja
     if (this.selectedType === 'Kriminalac') {
       this.inputFields = ['', '', '', '', ''];
     } else if (this.selectedType === 'Vozilo') {
@@ -647,16 +678,17 @@ confirmDeleteEdge(data: any, callback: Function): void {
       return;
     }
   
-    // Kreiraj objekat sa podacima za unos sa pravilnim tipom
+    // objekat sa podacima za unos sa pravilnim tipom
     const nodeData: Record<string, string> = this.inputFields.reduce((acc, value, index) => {
       acc[this.nodeAttributes[index]] = value;
       return acc;
-    }, {} as Record<string, string>);  // Pravilno inicijalizujemo kao Record<string, string>
+    }, {} as Record<string, string>);
   
     nodeData['type'] = this.selectedType;
 
       console.log(nodeData)
-    // Pozivamo DataService koji će slati podatke backendu
+
+    // saljemo podatke backendu
     this.dataService.addNodeToDatabase(nodeData).subscribe({
       next: (response) => {
         console.log('Uspešno dodato:', response);
@@ -684,7 +716,6 @@ confirmDeleteEdge(data: any, callback: Function): void {
           {
             this.onBazaClick();
           }
-        // Ovde možeš dodati logiku za uspešno dodavanje, kao što je obaveštenje korisnika
       },
       error: (error) => {
         console.error('Greška pri dodavanju:', error.error.message);
@@ -721,16 +752,14 @@ confirmDeleteEdge(data: any, callback: Function): void {
       return;
     }
   
-    // Kreiraj objekat sa podacima za unos sa pravilnim tipom
     const nodeData: Record<string, string> = this.inputFields.reduce((acc, value, index) => {
       acc[this.nodeAttributes[index]] = value;
       return acc;
-    }, {} as Record<string, string>);  // Pravilno inicijalizujemo kao Record<string, string>
+    }, {} as Record<string, string>);
   
     nodeData['type'] = this.selectedType;
 
-      console.log(nodeData)
-    // Pozivamo DataService koji će slati podatke backendu
+    console.log(nodeData)
     this.dataService.editNodeToDatabase(nodeData, this.selectedNode.id).subscribe({
       next: (response) => {
         console.log('Uspešno izmenjeno:', response);
@@ -757,7 +786,6 @@ confirmDeleteEdge(data: any, callback: Function): void {
           {
             this.onBazaClick();
           }
-        // Ovde možeš dodati logiku za uspešno dodavanje, kao što je obaveštenje korisnika
       },
       error: (error) => {
         console.error('Greška pri izmeni:', error.error.message);

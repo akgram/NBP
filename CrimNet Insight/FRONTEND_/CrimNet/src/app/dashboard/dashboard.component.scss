@@ -93,7 +93,6 @@
     border: 1px solid #ccc;
     border-radius: 8px;
     resize: vertical;
-    margin-right: 75px;
 }
 
 .upload-container {
@@ -132,16 +131,16 @@
   background-color: white;
 }
 
-//.edit-btnMongo {
-//  position: absolute;
-//  top: 8px;
-//  right: 8px;
-//  background-color: transparent;
- // border: none;
- // cursor: pointer;
- // font-size: 16px;
- // color: #007bff;
-//}
+.del-btnMongo {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #007bff;
+}
 .edit-btn:hover {
   color: #0056b3;
   transform: scale(1.1);

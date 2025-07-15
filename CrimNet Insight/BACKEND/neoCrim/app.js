@@ -8,20 +8,7 @@ const multer = require('multer');
 const path = require('path');
 
 
-// konfiguracija multer-a za upload slike
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + '-' + file.originalname;
-    cb(null, uniqueName);
-  }
-});
-const upload = multer({ storage: storage });
-
-
-// connect sa bazom
+// connect sa bazom neo4j
 const driver = neo4j.driver('bolt://localhost:7687', neo4j.auth.basic('neo4j', 'acavrbaCrim'));
 const session = driver.session();
 const session1 = driver.session();
@@ -33,20 +20,29 @@ const PORT = 3000;
 console.log('UPLOADS FOLDER:', path.join(__dirname, 'uploads'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const uri = 'mongodb://localhost:27017/admin';
-
 // connect sa bazom mongo
-mongoose.connect(uri, {})
-            .catch((err) => {console.error('Greska pri konekciji sa mongoDB:', err);});
+const uri = 'mongodb://localhost:27017/admin';
+mongoose.connect(uri, {}).catch((err) => {console.error('Greska pri konekciji sa mongoDB:', err);});
 
 
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self' data:;");
   next();
 });
+
+// konfiguracija multer-a za upload slike
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, 'uploads')); // apsolutna putanju
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + '-' + file.originalname;
+    cb(null, uniqueName);
+  }
+});
+const upload = multer({ storage: storage });
 
 // Ruta za login
 app.post('/api/login', async (req, res) => {
@@ -57,13 +53,11 @@ app.post('/api/login', async (req, res) => {
   }
 
   try {
-    // Cypher query za proveru korisnika
     const result = await session.run(
       `MATCH (u:User {username: $username, password: $password}) RETURN u`,
       { username, password }
     );
 
-    // Provera rezultata
     if (result.records.length > 0) {
       res.status(200).json({ message: 'Login successful.' });
     } else {
@@ -75,8 +69,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-////////////////////////////////MONGO
-// Šema i model
+////////////////////////////////MONGO (seme i modeli)
 const DosijeSchema = new mongoose.Schema({
   jmbg: String,
   dosije: String,
@@ -215,8 +208,9 @@ app.get('/api/mongo/:id/:type', async (req, res) => {
 
 // POST /api/mongo
 app.post('/api/mongoSave', upload.single('slika'), async (req, res) => {
-  const { id, type, opis, slika} = req.body;
-  //const slika = req.body.slika ? req.body.slika.filename : '';
+  const { id, type, opis} = req.body;
+  const slika = req.file ? req.file.filename : null;
+  console.log('Primljen fajl:', req.file);
 
   console.log('id, type, opis: ', id, type, opis);
   console.log('slika: ', slika);
@@ -304,7 +298,12 @@ app.post('/api/mongoSave', upload.single('slika'), async (req, res) => {
 
 // PUT /api/mongoEdit
 app.put('/api/mongoEdit', upload.single('slika'), async (req, res) => {
-  const { id, type, opis, slika} = req.body;
+  const { id, type, opis} = req.body;
+  const staraSlika = req.body.staraSlika; // ime fajla ako nema nove slike
+  const novaSlika = req.file ? req.file.filename : null;
+
+// koristi ili novu sliku (ako postoji), ili staru (iz body)
+const slika = novaSlika || staraSlika;
 
   console.log('id, type, opis: ', id, type, opis);
   console.log('slika: ', slika);
@@ -329,8 +328,8 @@ app.put('/api/mongoEdit', upload.single('slika'), async (req, res) => {
         return res.status(404).json({ message: "Opis nije pronađen." });
     } 
     else if (type === "Incident") {
-      const updated = await tokDesavanja.findOneAndUpdate( { id: id },
-        { opis: opis, slika: slika },
+      const updated = await TokDesavanja.findOneAndUpdate( { id: id },
+        { tok: opis, slika: slika },
         { new: true }
       );
 
@@ -356,6 +355,49 @@ app.put('/api/mongoEdit', upload.single('slika'), async (req, res) => {
   catch (error) {
     console.error('Greška pri snimanju:', error);
     res.status(500).json({ message: 'Greška na serveru.' });
+  }
+});
+
+app.delete(`/api/mongoDel/:id/:type`, async(req, res) => {
+  const {id, type} = req.params;
+  console.log("id: ", id);
+  console.log("type: ", type);
+
+  try{
+    if (type === "Kriminalac")
+    {
+      const dosije = await Dosije.findOneAndDelete({ jmbg: id });
+
+      if(!dosije)
+        return res.status(404).json({ message: "Dosije za brisanje nije pronađen." });
+    }
+    else if (type === "Vozilo")
+    {
+      const opisVozila = await OpisVozila.findOneAndDelete({ id: id });
+
+      if(!opisVozila)
+        return res.status(404).json({ message: "Opis vozila za brisanje nije pronađen." });
+    }
+    else if (type === "Incident")
+    {
+      const tokDesavanja = await TokDesavanja.findOneAndDelete({ id: id });
+
+      if(!tokDesavanja)
+        return res.status(404).json({ message: "Tok desavanja za brisanje nije pronađen." });
+    }
+    else if (type === "Lokacija")
+    {
+      const opisLokacije = await OpisLokacije.findOneAndDelete({ id: id });
+
+      if(!opisLokacije)
+        return res.status(404).json({ message: "Opis lokacije za brisanje nije pronađen." });
+    }
+
+    return res.status(200).json({ message: "Uspešno obrisano." });
+  }
+  catch(error) {
+    console.error("Greška pri brisanju: ", error);
+    res.status(500).json({ message: 'Greška na serveru.'});
   }
 });
 

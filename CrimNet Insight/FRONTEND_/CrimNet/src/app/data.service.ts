@@ -22,6 +22,11 @@ export class DataService {
 
   }
 
+  delMongo(id: any, type: any) : Observable<any> {
+    return this.http.delete(`/api/mongoDel/${id}/${type}`);
+
+  }
+
   getBaza(): Observable<any> {
     return this.http.get('/api/baza');
   }

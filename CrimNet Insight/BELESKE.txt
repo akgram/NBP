@@ -37,15 +37,19 @@ polja su podaci Kriminalca. // RESENO
 
 -mongoDB GET imamo
 
-----------------------------------------
+-mongoDB POST imamo
 
--mongoDB POST (nakon sto se doda node opcija za dodavanje opisa)
+-mongoDB PUT imamo
 
--mongoDB EDIT
-
--mongoDB DELETE (da se brise samo kad se obrise i node sa neo4j)
+-mongoDB DEL imamo
 
 -ako je na BAZA, ne moze da se vidi kartica Node-a
+
+-kartica sa podacima i slika(mozda) aktera kad se klikne na njega sa grafa
+
+-deo za dodavanje opisa od strane korisnika (inspektora npr) i taj deo je vidljiv na stranici
+
+----------------------------------------
 
 -DOCKEEEER
 
@@ -53,7 +57,3 @@ polja su podaci Kriminalca. // RESENO
 kliknuo na addNode. Odgovara samo za title = Baza. I nije bas bug.
 
 -prikaz veza iz baze??????????
-
--kartica sa podacima i slika(mozda) aktera kad se klikne na njega sa grafa
-
--deo za dodavanje izvestaja od strane korisnika (inspektora npr) i taj deo je vidljiv na stranici
